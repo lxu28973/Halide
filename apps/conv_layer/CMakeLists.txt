@@ -15,7 +15,9 @@ find_package(Halide REQUIRED)
 add_halide_generator(conv_layer.generator SOURCES conv_layer_generator.cpp)
 
 # Filters
-add_halide_library(conv_layer FROM conv_layer.generator)
+add_halide_library(conv_layer FROM conv_layer.generator
+                   STMT conv.stmt
+                   STMT_HTML conv.html)
 add_halide_library(conv_layer_auto_schedule FROM conv_layer.generator
                    GENERATOR conv_layer
                    AUTOSCHEDULER Halide::Mullapudi2016)

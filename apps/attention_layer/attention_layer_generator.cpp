@@ -67,7 +67,7 @@ public:
 
         Func concat("concat");
         Var c("c");
-        concat(b, n, c) = mat_sv(b, c / S, n, c - c / S);
+        concat(b, n, c) = mat_sv(b, c / S, n, c % S);
 
         Func mat_ao("mat_ao");
         Func prod_ao("prod_ao");

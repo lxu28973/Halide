@@ -18,17 +18,13 @@ add_halide_generator(attention_layer.generator SOURCES attention_layer_generator
 add_halide_library(attention_layer FROM attention_layer.generator
                    STMT attention.stmt
                    STMT_HTML attention.html)
-add_halide_library(attention_layer_auto_schedule FROM attention_layer.generator
-                   GENERATOR attention_layer
-                   AUTOSCHEDULER Halide::Mullapudi2016)
 
 # Main executable
 add_executable(attention_layer_process process.cpp)
 target_link_libraries(attention_layer_process
                       PRIVATE
                       Halide::ImageIO
-                      attention_layer
-                      attention_layer_auto_schedule)
+                      attention_layer)
 
 # Test that the app actually works!
 add_test(NAME attention_layer_process COMMAND attention_layer_process)

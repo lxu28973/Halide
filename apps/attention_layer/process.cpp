@@ -2,7 +2,6 @@
 #include <cstdio>
 
 #include "attention_layer.h"
-#include "attention_layer_auto_schedule.h"
 
 #include "HalideBuffer.h"
 #include "halide_benchmark.h"
@@ -11,64 +10,55 @@ using namespace Halide::Tools;
 using namespace Halide::Runtime;
 
 int main(int argc, char **argv) {
-    const int N = 5, CI = 128, CO = 128, W = 100, H = 80;
+    // B: Batch size
+    // H: Head number
+    // N: Token number
+    // D: Token dimension
+    // S: Hidden layer size
+    const int B = 1, H = 1, N = 512, D = 768, S = 512;
 
-    Buffer<float, 4> input(CI, W + 2, H + 2, N);
-    Buffer<float, 4> filter(CO, 3, 3, CI);
-    Buffer<float, 1> bias(CO);
+    Buffer<float, 3> input(B, N, D);
+    Buffer<float, 3> weight_q(H, D, S);
+    Buffer<float, 3> weight_k(H, D, S);
+    Buffer<float, 3> weight_v(H, D, S);
+    Buffer<float, 2> weight_o(H * S, D);
 
-    for (int c = 0; c < input.dim(3).extent(); c++) {
-        for (int z = 0; z < input.channels(); z++) {
-            for (int y = 0; y < input.height(); y++) {
-                for (int x = 0; x < input.width(); x++) {
-                    input(x, y, z, c) = rand();
-                }
+    for (int z = 0; z < input.channels(); z++) {
+        for (int y = 0; y < input.height(); y++) {
+            for (int x = 0; x < input.width(); x++) {
+                input(x, y, z) = rand();
             }
         }
     }
 
-    for (int c = 0; c < filter.dim(3).extent(); c++) {
-        for (int z = 0; z < filter.channels(); z++) {
-            for (int y = 0; y < filter.height(); y++) {
-                for (int x = 0; x < filter.width(); x++) {
-                    filter(x, y, z, c) = rand();
-                }
+    for (int z = 0; z < weight_v.channels(); z++) {
+        for (int y = 0; y < weight_v.height(); y++) {
+            for (int x = 0; x < weight_v.width(); x++) {
+                weight_q(x, y, z) = rand();
+                weight_k(x, y, z) = rand();
+                weight_v(x, y, z) = rand();
             }
         }
     }
 
-    for (int x = 0; x < bias.width(); x++) {
-        bias(x) = rand();
+    for (int y = 0; y < weight_k.height(); y++) {
+        for (int x = 0; x < weight_k.width(); x++) {
+            weight_o(x, y) = rand();
+        }
     }
 
-    Buffer<float, 4> output(CO, W, H, N);
+    Buffer<float, 3> output(B, N, D);
 
-// This is necessary to get the PTX compiler to do a good
-// job. TODO: This should be a scheduling directive or a runtime
-// function.
-#ifdef _WIN32
-    _putenv_s("HL_CUDA_JIT_MAX_REGISTERS", "256");
-#else
-    setenv("HL_CUDA_JIT_MAX_REGISTERS", "256", 1);
-#endif
-
-    attention_layer(input, filter, bias, output);
+    attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
 
     // Timing code
 
     // Manually-tuned version
     double min_t_manual = benchmark(10, 10, [&]() {
-        attention_layer(input, filter, bias, output);
-        output.device_sync();
+      attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
+      output.device_sync();
     });
-    printf("Manually-tuned time: %gms\n", min_t_manual * 1e3);
-
-    // Auto-scheduled version
-    double min_t_auto = benchmark(10, 10, [&]() {
-        attention_layer_auto_schedule(input, filter, bias, output);
-        output.device_sync();
-    });
-    printf("Auto-scheduled time: %gms\n", min_t_auto * 1e3);
+    printf("Manually-tuned time: %gs\n", min_t_manual);
 
     printf("Success!\n");
     return 0;

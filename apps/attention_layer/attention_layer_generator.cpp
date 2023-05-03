@@ -19,7 +19,9 @@ public:
         // N: Token number
         // D: Token dimension
         // S: Hidden layer size
-        const int B = 1, H = 1, N = 512, D = 768, S = 512;
+        const Expr B = input.dim(0).extent(), H = weight_v.dim(0).extent(),
+                   N = input.dim(1).extent(), D = input.dim(2).extent(),
+                   S = weight_v.dim(2).extent();
 
         /* THE ALGORITHM */
 
@@ -76,6 +78,8 @@ public:
         output(b, n, d) = mat_ao(b, n, d);
 
         /* THE SCHEDULE */
+
+        mat_ao.print_loop_nest();
     }
 };
 

@@ -4,6 +4,8 @@ namespace {
 
 using namespace Halide;
 
+const int SCHEDULE = 2;
+
 class AttentionLayer : public Halide::Generator<AttentionLayer> {
 public:
     Input<Buffer<float, 3>> input{"input"};
@@ -77,21 +79,71 @@ public:
         output(b, n, d) = mat_ao(b, n, d);
 
         /* THE SCHEDULE */
-        prod_q.compute_root();
-        mat_q.compute_root();
-        prod_k.compute_root();
-        mat_k.compute_root();
-        prod_v.compute_root();
-        mat_v.compute_root();
-        prod_qkt.compute_root();
-        mat_qkt.compute_root();
-        softmax.compute_root();
-        mat_sv.compute_root();
-        mat_ao.compute_root();
-        prod_ao.compute_root();
-        expo.compute_root();
-        exp_max.compute_root();
-        normalizer.compute_root();
+        if (SCHEDULE == 0) {
+            prod_q.compute_root();
+            mat_q.compute_root();
+            prod_k.compute_root();
+            mat_k.compute_root();
+            prod_v.compute_root();
+            mat_v.compute_root();
+            prod_qkt.compute_root();
+            mat_qkt.compute_root();
+            softmax.compute_root();
+            mat_sv.compute_root();
+            mat_ao.compute_root();
+            prod_ao.compute_root();
+            expo.compute_root();
+            exp_max.compute_root();
+            normalizer.compute_root();
+        } else if (SCHEDULE == 1) {
+            // fused qkt and softmax at each qkt row
+            prod_q.compute_root();
+            mat_q.compute_root();
+            prod_k.compute_root();
+            mat_k.compute_root();
+            prod_v.compute_root();
+            mat_v.compute_root();
+            softmax.compute_root();
+            mat_sv.compute_root();
+            mat_ao.compute_root();
+            prod_ao.compute_root();
+            softmax.reorder(nk, nq, h, b);
+            expo.reorder(nk, nq, h, b);
+            exp_max.reorder(nq, h, b);
+            mat_qkt.reorder(nk, nq, h, b);
+            prod_qkt.reorder(s, nk, nq, h, b);
+            normalizer.compute_at(softmax, nq);
+            expo.compute_at(softmax, nq);
+            exp_max.compute_at(softmax, nq);
+            mat_qkt.compute_at(softmax, nq);
+            prod_qkt.compute_at(mat_qkt, nk);
+        } else if (SCHEDULE == 2) {
+            // fused qkt , softmax and sv at each qkt row
+            prod_q.compute_root();
+            mat_q.compute_root();
+            prod_k.compute_root();
+            mat_k.compute_root();
+            prod_v.compute_root();
+            mat_v.compute_root();
+            softmax.compute_root();
+            mat_sv.compute_root();
+            mat_ao.compute_root();
+            prod_ao.compute_root();
+            softmax.reorder(nk, nq, h, b);
+            expo.reorder(nk, nq, h, b);
+            exp_max.reorder(nq, h, b);
+            mat_qkt.update(0).reorder(nk, nq, h, b);
+            prod_qkt.reorder(s, nk, nq, h, b);
+            normalizer.compute_at(softmax, nq);
+            expo.compute_at(softmax, nq);
+            exp_max.compute_at(softmax, nq);
+            mat_qkt.compute_at(softmax, nq);
+            prod_qkt.compute_at(mat_qkt, nk);
+            prod_sv.reorder(n, s, nq, h, b);
+            prod_sv.compute_at(mat_sv, s);
+            mat_sv.update(0).reorder(s, n, h, b);
+            softmax.compute_at(mat_sv, n);
+        }
 
         mat_ao.print_loop_nest();
     }

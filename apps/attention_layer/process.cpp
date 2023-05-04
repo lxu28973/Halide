@@ -10,23 +10,40 @@
 using namespace Halide::Tools;
 using namespace Halide::Runtime;
 
+// B: Batch size
+// H: Head number
+// N: Token number
+// D: Token dimension
+// S: Hidden layer size
+const int B = 1, H = 1, N = 512, D = 768, S = 768;
+const float HI = 1, LO = -1;
+
+Buffer<float, 3> input(B, N, D);
+Buffer<float, 3> weight_q(H, D, S);
+Buffer<float, 3> weight_k(H, D, S);
+Buffer<float, 3> weight_v(H, D, S);
+Buffer<float, 2> weight_o(H * S, D);
+Buffer<float, 3> output(B, N, D);
+
+static float c_input[B][N][D];
+static float c_weight_q[H][D][S];
+static float c_weight_k[H][D][S];
+static float c_weight_v[H][D][S];
+static float c_weight_o[H * S][D];
+static float c_output[B][N][D] = {0};
+
+static float mat_q[B][H][N][S] = {0};
+static float mat_k[B][H][N][S] = {0};
+static float mat_v[B][H][N][S] = {0};
+static float mat_qkt[B][H][N][N] = {0};
+static float mat_sv[B][H][N][S] = {0};
+static float concat[B][N][H * S] = {0};
+static float softmax[B][H][N][N] = {0};
+
 int main(int argc, char **argv) {
     srand(0);
-    // B: Batch size
-    // H: Head number
-    // N: Token number
-    // D: Token dimension
-    // S: Hidden layer size
-    const int B = 8, H = 8, N = 16, D = 8, S = 16;
-    const float HI = 1, LO = -1;
 
-    Buffer<float, 3> input(B, N, D);
-    Buffer<float, 3> weight_q(H, D, S);
-    Buffer<float, 3> weight_k(H, D, S);
-    Buffer<float, 3> weight_v(H, D, S);
-    Buffer<float, 2> weight_o(H * S, D);
-
-    float c_input[B][N][D];
+    // randomize input and weight
     for (int z = 0; z < input.channels(); z++) {
         for (int y = 0; y < input.height(); y++) {
             for (int x = 0; x < input.width(); x++) {
@@ -37,9 +54,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float c_weight_q[H][D][S];
-    float c_weight_k[H][D][S];
-    float c_weight_v[H][D][S];
     for (int z = 0; z < weight_v.channels(); z++) {
         for (int y = 0; y < weight_v.height(); y++) {
             for (int x = 0; x < weight_v.width(); x++) {
@@ -56,7 +70,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float c_weight_o[H * S][D];
     for (int y = 0; y < weight_o.height(); y++) {
         for (int x = 0; x < weight_o.width(); x++) {
             c_weight_o[x][y] = LO + static_cast<float>(rand()) /
@@ -65,15 +78,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    Buffer<float, 3> output(B, N, D);
-
+    // halide run
     attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
 
-    float c_output[B][N][D] = {0};
-
-    float mat_q[B][H][N][S] = {0};
-    float mat_k[B][H][N][S] = {0};
-    float mat_v[B][H][N][S] = {0};
+    // c run
     for (int b = 0; b < B; b++) {
         for (int h = 0; h < H; ++h) {
             for (int n = 0; n < N; ++n) {
@@ -88,7 +96,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float mat_qkt[B][H][N][N] = {0};
     for (int b = 0; b < B; b++) {
         for (int h = 0; h < H; ++h) {
             for (int n = 0; n < N; ++n) {
@@ -101,7 +108,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float softmax[B][H][N][N] = {0};
     for (int b = 0; b < B; b++) {
         for (int h = 0; h < H; ++h) {
             for (int n = 0; n < N; ++n) {
@@ -120,7 +126,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float mat_sv[B][H][N][S] = {0};
     for (int b = 0; b < B; b++) {
         for (int h = 0; h < H; ++h) {
             for (int n = 0; n < N; ++n) {
@@ -133,7 +138,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    float concat[B][N][H * S] = {0};
     for (int b = 0; b < B; b++) {
         for (int h = 0; h < H; ++h) {
             for (int n = 0; n < N; ++n) {
@@ -168,10 +172,11 @@ int main(int argc, char **argv) {
             }
         }
     }
+
     // Timing code
 
     // Manually-tuned version
-    double min_t_manual = benchmark(10, 10, [&]() {
+    double min_t_manual = benchmark(2, 2, [&]() {
         attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
         output.device_sync();
     });

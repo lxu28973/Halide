@@ -63,5 +63,6 @@ add_app(resize)
 # add_app(resnet_50)  # TODO(#5374): missing CMake build
 # add_app(simd_op_check)  # TODO(#5374): missing CMake build
 add_app(stencil_chain)
+add_app(toy_app)
 add_app(unsharp)
 add_app(wavelet)

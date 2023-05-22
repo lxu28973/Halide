@@ -32,6 +32,7 @@ endif()
 # add_app(HelloAndroidCamera2)  # TODO(#5374): missing CMake build
 # add_app(HelloPyTorch)  # TODO(#5374): missing CMake build
 # add_app(HelloiOS)  # TODO(#5374): missing CMake build
+add_app(attention_layer)
 # add_app(auto_viz)  # TODO(#5374): missing CMake build
 add_app(bgu)
 add_app(bilateral_grid)
@@ -39,7 +40,6 @@ add_app(blur)
 add_app(c_backend)
 add_app(camera_pipe)
 add_app(conv_layer)
-add_app(attention_layer)
 add_app(cuda_mat_mul)
 add_app(depthwise_separable_conv)
 add_app(fft)

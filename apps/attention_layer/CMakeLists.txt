@@ -17,7 +17,8 @@ add_halide_generator(attention_layer.generator SOURCES attention_layer_generator
 # Filters
 add_halide_library(attention_layer FROM attention_layer.generator
                    STMT attention.stmt
-                   STMT_HTML attention.html)
+                   STMT_HTML attention.html
+                   COMPILER_LOG attention.log)
 
 # Main executable
 add_executable(attention_layer_process process.cpp)

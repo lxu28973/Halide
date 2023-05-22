@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 2;
+const int SCHEDULE = 3;
 
 class AttentionLayer : public Halide::Generator<AttentionLayer> {
 public:
@@ -143,9 +143,30 @@ public:
             prod_sv.compute_at(mat_sv, s);
             mat_sv.update(0).reorder(s, n, h, b);
             softmax.compute_at(mat_sv, n);
+        } else if (SCHEDULE == 3) {
+            prod_q.compute_root();
+            mat_q.compute_root();
+            prod_k.compute_root();
+            mat_k.compute_root();
+            prod_v.compute_root();
+            mat_v.compute_root();
+            prod_qkt.compute_root();
+            mat_qkt.compute_root();
+            softmax.compute_root();
+            mat_sv.compute_root();
+            mat_ao.compute_root();
+            prod_ao.compute_root();
+            expo.compute_root();
+            exp_max.compute_root();
+            normalizer.compute_root();
+            prod_q.reorder(d, s, n, h, b);
+            prod_q.parallel(h);
+            prod_k.parallel(h);
+            prod_v.parallel(h);
+            prod_qkt.parallel(h);
         }
 
-        mat_ao.print_loop_nest();
+        prod_q.print_loop_nest();
     }
 };
 

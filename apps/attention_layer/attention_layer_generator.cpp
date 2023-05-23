@@ -190,6 +190,7 @@ public:
             prod_qkt.parallel(h);
         }
 
+        output.print_loop_nest();
     }
 };
 

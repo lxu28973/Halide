@@ -21,7 +21,10 @@ add_halide_library(attention_layer FROM attention_layer.generator
 add_halide_library(attention_layer_auto_schedule FROM attention_layer.generator
                    GENERATOR attention_layer
                    AUTOSCHEDULER Halide::Adams2019
-                   SCHEDULE attention_auto.txt)
+                   SCHEDULE attention_auto.txt
+                   STMT attention_auto.stmt
+                   STMT_HTML attention_auto.html
+COMPILER_LOG attention.log)
 
 # Main executable
 add_executable(attention_layer_process process.cpp)

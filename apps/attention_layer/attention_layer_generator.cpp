@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 3;
+const int SCHEDULE = 0;
 
 class AttentionLayer : public Halide::Generator<AttentionLayer> {
 public:
@@ -79,7 +79,32 @@ public:
         output(b, n, d) = mat_ao(b, n, d);
 
         /* THE SCHEDULE */
-        if (SCHEDULE == 0) {
+        if (using_autoscheduler()) {
+
+            input.dim(0).set_estimate(0, 1);
+            input.dim(1).set_estimate(0, 256);
+            input.dim(2).set_estimate(0, 256);
+
+            weight_q.dim(0).set_estimate(0, 1);
+            weight_q.dim(1).set_estimate(0, 256);
+            weight_q.dim(2).set_estimate(0, 256);
+
+            weight_k.dim(0).set_estimate(0, 1);
+            weight_k.dim(1).set_estimate(0, 256);
+            weight_k.dim(2).set_estimate(0, 256);
+
+            weight_v.dim(0).set_estimate(0, 1);
+            weight_v.dim(1).set_estimate(0, 256);
+            weight_v.dim(2).set_estimate(0, 256);
+
+            weight_o.dim(0).set_estimate(0, 256);
+            weight_o.dim(1).set_estimate(0, 256);
+
+            output.dim(0).set_estimate(0, 1);
+            output.dim(1).set_estimate(0, 256);
+            output.dim(2).set_estimate(0, 256);
+
+        } else if (SCHEDULE == 0) {
             prod_q.compute_root();
             mat_q.compute_root();
             prod_k.compute_root();
@@ -159,14 +184,12 @@ public:
             expo.compute_root();
             exp_max.compute_root();
             normalizer.compute_root();
-            prod_q.reorder(d, s, n, h, b);
             prod_q.parallel(h);
             prod_k.parallel(h);
             prod_v.parallel(h);
             prod_qkt.parallel(h);
         }
 
-        prod_q.print_loop_nest();
     }
 };
 

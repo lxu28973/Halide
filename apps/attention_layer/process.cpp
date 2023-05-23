@@ -1,8 +1,9 @@
-#include "math.h"
+#include <cmath>
 #include <chrono>
 #include <cstdio>
 
 #include "attention_layer.h"
+#include "attention_layer_auto_schedule.h"
 
 #include "HalideBuffer.h"
 #include "halide_benchmark.h"
@@ -15,7 +16,7 @@ using namespace Halide::Runtime;
 // N: Token number
 // D: Token dimension
 // S: Hidden layer size
-const int B = 1, H = 1, N = 512, D = 768, S = 768;
+const int B = 1, H = 4, N = 256, D = 512, S = 512;
 const float HI = 1, LO = -1;
 
 Buffer<float, 3> input(B, N, D);
@@ -77,9 +78,6 @@ int main(int argc, char **argv) {
             weight_o(x, y) = c_weight_o[x][y];
         }
     }
-
-    // halide run
-    attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
 
     // c run
     for (int b = 0; b < B; b++) {
@@ -158,6 +156,9 @@ int main(int argc, char **argv) {
         }
     }
 
+    // halide run
+    attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
+
     // Check the C and Halide results match:
     for (int b = 0; b < B; b++) {
         for (int n = 0; n < N; ++n) {
@@ -165,9 +166,28 @@ int main(int argc, char **argv) {
                 float error = output(b, n, d) - c_output[b][n][d];
                 // It's floating-point math, so we'll allow some slop:
                 if (error < -0.001f || error > 0.001f) {
-                    printf("halide_result(%d, %d, %d) = %f instead of %f\n",
+                    printf("halide_manually_tuned_result(%d, %d, %d) = %f instead of %f\n",
                            b, n, d, output(b, n, d), c_output[b][n][d]);
 //                    return -1;
+                }
+            }
+        }
+    }
+
+
+    // halide run
+    attention_layer_auto_schedule(input, weight_q, weight_k, weight_v, weight_o, output);
+
+    // Check the C and Halide results match:
+    for (int b = 0; b < B; b++) {
+        for (int n = 0; n < N; ++n) {
+            for (int d = 0; d < D; ++d) {
+                float error = output(b, n, d) - c_output[b][n][d];
+                // It's floating-point math, so we'll allow some slop:
+                if (error < -0.001f || error > 0.001f) {
+                    printf("halide_auto_tuned_result(%d, %d, %d) = %f instead of %f\n",
+                           b, n, d, output(b, n, d), c_output[b][n][d]);
+                    //                    return -1;
                 }
             }
         }
@@ -181,6 +201,13 @@ int main(int argc, char **argv) {
         output.device_sync();
     });
     printf("Manually-tuned time: %gs\n", min_t_manual);
+
+    // Auto-scheduled version
+    double min_t_auto = benchmark(10, 10, [&]() {
+      attention_layer_auto_schedule(input, weight_q, weight_k, weight_v, weight_o, output);
+      output.device_sync();
+    });
+    printf("Auto-scheduled time: %gms\n", min_t_auto * 1e3);
 
     printf("Success!\n");
     return 0;

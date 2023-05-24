@@ -4,7 +4,191 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 0;
+const int SCHEDULE = -1;
+
+inline void apply_schedule_attention_layer_auto_schedule(
+    ::Halide::Pipeline pipeline
+) {
+    using ::Halide::Func;
+    using ::Halide::MemoryType;
+    using ::Halide::RVar;
+    using ::Halide::TailStrategy;
+    using ::Halide::Var;
+    Func output = pipeline.get_func(23);
+    Func mat_ao = pipeline.get_func(22);
+    Func prod_ao = pipeline.get_func(21);
+    Func concat = pipeline.get_func(19);
+    Func mat_sv = pipeline.get_func(18);
+    Func prod_sv = pipeline.get_func(17);
+    Func softmax = pipeline.get_func(16);
+    Func normalizer = pipeline.get_func(15);
+    Func expo = pipeline.get_func(14);
+    Func exp_max = pipeline.get_func(13);
+    Func maximum = pipeline.get_func(12);
+    Func mat_qkt = pipeline.get_func(11);
+    Func prod_qkt = pipeline.get_func(10);
+    Func mat_q = pipeline.get_func(9);
+    Func prod_q = pipeline.get_func(8);
+    Func mat_k = pipeline.get_func(6);
+    Func prod_k = pipeline.get_func(5);
+    Func mat_v = pipeline.get_func(3);
+    Func prod_v = pipeline.get_func(2);
+    Var b(output.get_schedule().dims()[0].var);
+    Var bi("bi");
+    Var c(concat.get_schedule().dims()[2].var);
+    Var ci("ci");
+    Var d(output.get_schedule().dims()[2].var);
+    Var di("di");
+    Var h(mat_sv.get_schedule().dims()[1].var);
+    Var n(output.get_schedule().dims()[1].var);
+    Var ni("ni");
+    Var nk(softmax.get_schedule().dims()[3].var);
+    Var nki("nki");
+    Var nq(softmax.get_schedule().dims()[2].var);
+    Var nqi("nqi");
+    Var s(mat_sv.get_schedule().dims()[3].var);
+    Var si("si");
+    Var sii("sii");
+    RVar r18_x(mat_q.update(0).get_schedule().dims()[0].var);
+    RVar r23_x(mat_qkt.update(0).get_schedule().dims()[0].var);
+    RVar r28_x(mat_sv.update(0).get_schedule().dims()[0].var);
+    RVar r33_x(mat_ao.update(0).get_schedule().dims()[0].var);
+    output
+        .split(b, b, bi, 16, TailStrategy::GuardWithIf)
+        .vectorize(bi)
+        .compute_root()
+        .reorder({bi, b, d, n})
+        .parallel(n);
+    mat_ao
+        .split(d, d, di, 16, TailStrategy::RoundUp)
+        .vectorize(di)
+        .compute_at(output, n)
+        .reorder({di, d, b, n})
+        .reorder_storage(d, b, n);
+    mat_ao.update(0)
+        .split(d, d, di, 16, TailStrategy::GuardWithIf)
+        .vectorize(di)
+        .reorder({di, r33_x, d, b, n});
+    concat
+        .split(c, c, ci, 16, TailStrategy::RoundUp)
+        .vectorize(ci)
+        .compute_at(output, n)
+        .reorder({ci, c, b, n})
+        .reorder_storage(c, b, n);
+    mat_sv
+        .split(s, s, si, 16, TailStrategy::RoundUp)
+        .vectorize(si)
+        .compute_at(output, n)
+        .reorder({si, s, b, h, n})
+        .reorder_storage(s, b, h, n);
+    mat_sv.update(0)
+        .split(s, s, si, 16, TailStrategy::RoundUp)
+        .vectorize(si)
+        .reorder({si, r28_x, s, b, h, n});
+    softmax
+        .split(nk, nk, nki, 16, TailStrategy::RoundUp)
+        .vectorize(nki)
+        .compute_at(output, n)
+        .reorder({nki, nk, b, h, nq})
+        .reorder_storage(nk, b, h, nq);
+    normalizer
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .vectorize(nqi)
+        .compute_root()
+        .reorder({nqi, nq, b, h})
+        .parallel(nq)
+        .reorder_storage(nq, b, h);
+    normalizer.update(0)
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .vectorize(nqi)
+        .reorder({nqi, r28_x, nq, b, h})
+        .parallel(nq);
+    expo
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .split(nk, nk, nki, 16, TailStrategy::RoundUp)
+        .vectorize(nki)
+        .compute_root()
+        .reorder({nki, nk, nqi, b, h, nq})
+        .parallel(nq)
+        .reorder_storage(nk, b, h, nq);
+    exp_max
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .vectorize(nqi)
+        .compute_at(expo, b)
+        .reorder({nqi, nq, b, h})
+        .reorder_storage(nq, b, h);
+    maximum
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .vectorize(nqi)
+        .compute_at(expo, b)
+        .reorder({nqi, nq, b, h})
+        .reorder_storage(nq, b, h);
+    maximum.update(0)
+        .split(nq, nq, nqi, 16, TailStrategy::RoundUp)
+        .vectorize(nqi)
+        .reorder({nqi, r28_x, nq, b, h});
+    mat_qkt
+        .split(nk, nk, nki, 16, TailStrategy::RoundUp)
+        .vectorize(nki)
+        .compute_at(expo, b)
+        .reorder({nki, nk, b, h, nq})
+        .reorder_storage(nk, b, h, nq);
+    mat_qkt.update(0)
+        .split(nk, nk, nki, 16, TailStrategy::RoundUp)
+        .vectorize(nki)
+        .reorder({nki, r23_x, nk, b, h, nq});
+    mat_q
+        .split(s, s, si, 128, TailStrategy::RoundUp)
+        .split(n, n, ni, 32, TailStrategy::RoundUp)
+        .split(si, si, sii, 16, TailStrategy::RoundUp)
+        .vectorize(sii)
+        .compute_root()
+        .reorder({sii, si, ni, s, b, h, n})
+        .fuse(s, n, s)
+        .parallel(s)
+        .reorder_storage(s, b, h, n);
+    mat_q.update(0)
+        .split(s, s, si, 128, TailStrategy::GuardWithIf)
+        .split(n, n, ni, 32, TailStrategy::GuardWithIf)
+        .split(si, si, sii, 16, TailStrategy::GuardWithIf)
+        .vectorize(sii)
+        .reorder({sii, r18_x, si, ni, s, b, h, n})
+        .fuse(s, n, s)
+        .parallel(s);
+    mat_k
+        .split(s, s, si, 4, TailStrategy::RoundUp)
+        .split(n, n, ni, 16, TailStrategy::RoundUp)
+        .vectorize(ni)
+        .compute_root()
+        .reorder({ni, n, si, b, h, s})
+        .parallel(s)
+        .reorder_storage(n, b, h, s);
+    mat_k.update(0)
+        .split(s, s, si, 4, TailStrategy::GuardWithIf)
+        .split(n, n, ni, 16, TailStrategy::GuardWithIf)
+        .vectorize(ni)
+        .reorder({ni, r18_x, n, si, b, h, s})
+        .parallel(s);
+    mat_v
+        .split(s, s, si, 128, TailStrategy::RoundUp)
+        .split(n, n, ni, 32, TailStrategy::RoundUp)
+        .split(si, si, sii, 16, TailStrategy::RoundUp)
+        .vectorize(sii)
+        .compute_root()
+        .reorder({sii, si, ni, s, b, h, n})
+        .fuse(s, n, s)
+        .parallel(s)
+        .reorder_storage(s, b, h, n);
+    mat_v.update(0)
+        .split(s, s, si, 128, TailStrategy::GuardWithIf)
+        .split(n, n, ni, 32, TailStrategy::GuardWithIf)
+        .split(si, si, sii, 16, TailStrategy::GuardWithIf)
+        .vectorize(sii)
+        .reorder({sii, r18_x, si, ni, s, b, h, n})
+        .fuse(s, n, s)
+        .parallel(s);
+
+}
 
 class AttentionLayer : public Halide::Generator<AttentionLayer> {
 public:
@@ -15,42 +199,15 @@ public:
     Input<Buffer<float, 2>> weight_o{"weight_o"};
     Output<Buffer<float, 3>> output{"output"};
 
+    // B: Batch size
+    // H: Head number
+    // N: Token number
+    // D: Token dimension
+    // S: Hidden layer size
+    const int B = 1, H = 4, N = 256, D = 512, S = 512;
+
     void generate() {
-        // B: Batch size
-        // H: Head number
-        // N: Token number
-        // D: Token dimension
-        // S: Hidden layer size
-        const Expr B = input.dim(0).extent(), H = weight_v.dim(0).extent(),
-                   N = input.dim(1).extent(), D = input.dim(2).extent(),
-                   S = weight_v.dim(2).extent();
-
         /* THE ALGORITHM */
-
-        Var b("b"), h("h"), n("n"), d("d"), s("s");
-        Var nq("nq"), nk("nk");
-        Var c("c");
-        RDom ddim(0, D);
-        RDom sdim(0, S);
-        RDom ndim(0, N);
-        RDom cdim(0, S * H);
-
-        Func prod_q("prod_q");
-        Func prod_k("prod_k");
-        Func prod_v("prod_v");
-        Func mat_q("mat_q");
-        Func mat_k("mat_k");
-        Func mat_v("mat_v");
-        Func prod_qkt("prod_qkt");
-        Func mat_qkt("mat_qkt");
-        Func exp_max("exp_max"), expo("expo"), normalizer("normalizer");
-        Func softmax("softmax");
-        Func prod_sv("prod_sv");
-        Func mat_sv("mat_sv");
-        Func concat("concat");
-        Func prod_ao("prod_ao");
-        Func mat_ao("mat_ao");
-
         prod_q(b, h, n, s, d) = input(b, n, d) * weight_q(h, d, s);
         prod_k(b, h, n, s, d) = input(b, n, d) * weight_k(h, d, s);
         prod_v(b, h, n, s, d) = input(b, n, d) * weight_v(h, d, s);
@@ -77,7 +234,9 @@ public:
         mat_ao(b, n, d) += prod_ao(b, n, d, cdim);
 
         output(b, n, d) = mat_ao(b, n, d);
+    }
 
+    void schedule() {
         /* THE SCHEDULE */
         if (using_autoscheduler()) {
 
@@ -188,10 +347,36 @@ public:
             prod_k.parallel(h);
             prod_v.parallel(h);
             prod_qkt.parallel(h);
+        } else {
+            apply_schedule_attention_layer_auto_schedule(get_pipeline());
         }
 
-        output.print_loop_nest();
     }
+
+private:
+    Var b{"b"}, h{"h"}, n{"n"}, d{"d"}, s{"s"};
+    Var nq{"nq"}, nk{"nk"};
+    Var c{"c"};
+    RDom ddim{0, D};
+    RDom sdim{0, S};
+    RDom ndim{0, N};
+    RDom cdim{0, S * H};
+
+    Func prod_q{"prod_q"};
+    Func prod_k{"prod_k"};
+    Func prod_v{"prod_v"};
+    Func mat_q{"mat_q"};
+    Func mat_k{"mat_k"};
+    Func mat_v{"mat_v"};
+    Func prod_qkt{"prod_qkt"};
+    Func mat_qkt{"mat_qkt"};
+    Func exp_max{"exp_max"}, expo{"expo"}, normalizer{"normalizer"};
+    Func softmax{"softmax"};
+    Func prod_sv{"prod_sv"};
+    Func mat_sv{"mat_sv"};
+    Func concat{"concat"};
+    Func prod_ao{"prod_ao"};
+    Func mat_ao{"mat_ao"};
 };
 
 }  // namespace

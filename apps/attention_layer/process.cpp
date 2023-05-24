@@ -196,11 +196,11 @@ int main(int argc, char **argv) {
     // Timing code
 
     // Manually-tuned version
-    double min_t_manual = benchmark(2, 2, [&]() {
+    double min_t_manual = benchmark(10, 10, [&]() {
         attention_layer(input, weight_q, weight_k, weight_v, weight_o, output);
         output.device_sync();
     });
-    printf("Manually-tuned time: %gs\n", min_t_manual);
+    printf("Manually-tuned time: %gms\n", min_t_manual * 1e3);
 
     // Auto-scheduled version
     double min_t_auto = benchmark(10, 10, [&]() {

@@ -13,28 +13,13 @@ public:
     Input<Buffer<float, 2>> weight_k{"weight_k"};
     Output<Buffer<float, 2>> output{"output"};
 
+    // N: Token number
+    // D: Token dimension
+    // S: Hidden layer size
+    const int N = 512, D = 64, S = 256;
+
     void generate() {
-        // N: Token number
-        // D: Token dimension
-        // S: Hidden layer size
-        const Expr N = input.dim(0).extent(), D = input.dim(1).extent(),
-                   S = weight_q.dim(1).extent();
-
         /* THE ALGORITHM */
-
-        Var n("n"), d("d"), s("s");
-        Var nq("nq"), nk("nk");
-        RDom ddim(0, D);
-        RDom sdim(0, S);
-        RDom ndim(0, N);
-
-        Func prod_q("prod_q");
-        Func prod_k("prod_k");
-        Func mat_q("mat_q");
-        Func mat_k("mat_k");
-        Func prod_qkt("prod_qkt");
-        Func mat_qkt("mat_qkt");
-
         prod_q(n, s, d) = input(n, d) * weight_q(d, s);
         prod_k(n, s, d) = input(n, d) * weight_k(d, s);
 
@@ -46,7 +31,9 @@ public:
         mat_qkt(nq, nk) += prod_qkt(nq, nk, sdim);
 
         output(nq, nk) = mat_qkt(nq, nk);
+    }
 
+    void schedule() {
         /* THE SCHEDULE */
         if (SCHEDULE == 0) {
             prod_q.compute_root();
@@ -73,6 +60,20 @@ public:
 
         mat_qkt.print_loop_nest();
     }
+
+private:
+    Var n{"n"}, d{"d"}, s{"s"};
+    Var nq{"nq"}, nk{"nk"};
+    RDom ddim{0, D};
+    RDom sdim{0, S};
+    RDom ndim{0, N};
+
+    Func prod_q{"prod_q"};
+    Func prod_k{"prod_k"};
+    Func mat_q{"mat_q"};
+    Func mat_k{"mat_k"};
+    Func prod_qkt{"prod_qkt"};
+    Func mat_qkt{"mat_qkt"};
 };
 
 }  // namespace

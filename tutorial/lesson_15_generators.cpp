@@ -165,3 +165,41 @@ HALIDE_REGISTER_GENERATOR(MySecondGenerator, my_second_generator)
 
 // After compiling this file, see how to use it in
 // lesson_15_generators_build.sh
+
+
+class ToyApp : public Halide::Generator<ToyApp> {
+public:
+    Input<Buffer<float, 2>> input{"input"};
+    Input<Buffer<float, 2>> weight_q{"weight_q"};
+    Output<Buffer<float, 2>> output{"output"};
+
+    void generate() {
+        // N: Token number
+        // D: Token dimension
+        // S: Hidden layer size
+        const Expr D = 512;
+
+        /* THE ALGORITHM */
+
+        Var n("n"), d("d"), s("s");
+        RDom ddim(0, D);
+
+        Func prod_q("prod_q");
+        Func mat_q("mat_q");
+
+        prod_q(n, s, d) = input(n, d) * weight_q(d, s);
+
+        mat_q(n, s) += prod_q(n, s, ddim);
+        output(n, s) = mat_q(n, s);
+
+        /* THE SCHEDULE */
+        prod_q.reorder(d, s, n);
+        mat_q.update(0).reorder(s, n);
+        prod_q.compute_at(mat_q, s);
+        prod_q.vectorize(d, 8);
+        mat_q.compute_root();
+
+    }
+};
+
+HALIDE_REGISTER_GENERATOR(ToyApp, toy_app)

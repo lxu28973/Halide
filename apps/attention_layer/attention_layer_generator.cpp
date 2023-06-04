@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = -1;
+const int SCHEDULE = 0;
 
 inline void apply_schedule_attention_layer_auto_schedule(
     ::Halide::Pipeline pipeline

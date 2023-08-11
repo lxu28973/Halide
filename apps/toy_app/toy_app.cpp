@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 1;
+const int SCHEDULE = 3;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -56,6 +56,23 @@ public:
             prod_qkt.compute_root();
             mat_qkt.compute_root();
         } else if (SCHEDULE == 3) {
+          Var so, si, no, ni;
+          Var nqo, nqi, nko, nki;
+          prod_q.reorder(d, s, n);
+          mat_q.reorder(s, n);
+          prod_k.reorder(d, s, n);
+          mat_k.reorder(s, n);
+          prod_qkt.reorder(s, nk, nq);
+          mat_qkt.reorder(nk, nq);
+          prod_q.compute_root();
+          prod_q.gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_q.compute_root();
+          prod_k.compute_root();
+          prod_k.gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_k.compute_root();
+          prod_qkt.compute_root();
+          prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 8, 8);
+          mat_qkt.compute_root();
         }
 
         mat_qkt.print_loop_nest();

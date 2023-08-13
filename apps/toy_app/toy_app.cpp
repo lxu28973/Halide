@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 3;
+const int SCHEDULE = 4;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -67,12 +67,57 @@ public:
           prod_q.compute_root();
           prod_q.gpu_tile(s, n, so, no, si, ni, 8, 8);
           mat_q.compute_root();
+          mat_q.update(0).gpu_tile(s, n, so, no, si, ni, 8, 8);
           prod_k.compute_root();
           prod_k.gpu_tile(s, n, so, no, si, ni, 8, 8);
           mat_k.compute_root();
+          mat_k.update(0).gpu_tile(s, n, so, no, si, ni, 8, 8);
           prod_qkt.compute_root();
           prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 8, 8);
           mat_qkt.compute_root();
+          mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 8, 8);
+        } else if (SCHEDULE == 4) {
+          Var so, si, no, ni;
+          Var nqo, nqi, nko, nki;
+          prod_q.reorder(d, s, n);
+          mat_q.reorder(s, n);
+          prod_k.reorder(d, s, n);
+          mat_k.reorder(s, n);
+          prod_qkt.reorder(s, nk, nq);
+          mat_qkt.reorder(nk, nq);
+          prod_q.compute_root();
+          prod_q.gpu_tile(s, n, so, no, si, ni, 16, 16);
+          mat_q.compute_root();
+          mat_q.update(0).gpu_tile(s, n, so, no, si, ni, 16, 16);
+          prod_k.compute_root();
+          prod_k.gpu_tile(s, n, so, no, si, ni, 16, 16);
+          mat_k.compute_root();
+          mat_k.update(0).gpu_tile(s, n, so, no, si, ni, 16, 16);
+          prod_qkt.compute_root();
+          prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 16, 16);
+          mat_qkt.compute_root();
+          mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 16, 16);
+        } else if (SCHEDULE == 5) {
+          Var so, si, no, ni;
+          Var nqo, nqi, nko, nki;
+          prod_q.reorder(d, s, n);
+          mat_q.reorder(s, n);
+          prod_k.reorder(d, s, n);
+          mat_k.reorder(s, n);
+          prod_qkt.reorder(s, nk, nq);
+          mat_qkt.reorder(nk, nq);
+          prod_q.compute_root();
+          prod_q.gpu_tile(s, n, so, no, si, ni, 32, 32);
+          mat_q.compute_root();
+          mat_q.update(0).gpu_tile(s, n, so, no, si, ni, 32, 32);
+          prod_k.compute_root();
+          prod_k.gpu_tile(s, n, so, no, si, ni, 32, 32);
+          mat_k.compute_root();
+          mat_k.update(0).gpu_tile(s, n, so, no, si, ni, 32, 32);
+          prod_qkt.compute_root();
+          prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
+          mat_qkt.compute_root();
+          mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
         }
 
         mat_qkt.print_loop_nest();

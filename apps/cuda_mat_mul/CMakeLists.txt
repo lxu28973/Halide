@@ -30,7 +30,7 @@ add_halide_generator(mat_mul.generator SOURCES mat_mul_generator.cpp)
 # Filters
 add_halide_library(mat_mul FROM mat_mul.generator
                    TARGETS host
-                   FEATURES cuda cuda_capability_50
+                   FEATURES cuda cuda_capability_86
                    PARAMS size=1024)
 
 # Main executable

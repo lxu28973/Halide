@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 4;
+const int SCHEDULE = 7;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -118,9 +118,50 @@ public:
           prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
           mat_qkt.compute_root();
           mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
+        } else if (SCHEDULE == 6) {
+          Var so, si, no, ni;
+          Var nqo, nqi, nko, nki;
+          prod_q.reorder(d, s, n);
+          mat_q.reorder(s, n);
+          prod_k.reorder(d, s, n);
+          mat_k.reorder(s, n);
+          prod_qkt.reorder(s, nk, nq);
+          mat_qkt.reorder(nk, nq);
+          prod_q.compute_root();
+          prod_q.gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_q.compute_root();
+          mat_q.update(0).gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_q.store_in(Halide::MemoryType::GPUShared);
+          prod_k.compute_root();
+          prod_k.gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_k.compute_root();
+          mat_k.update(0).gpu_tile(s, n, so, no, si, ni, 8, 8);
+          mat_k.store_in(Halide::MemoryType::GPUShared);
+          prod_qkt.compute_root();
+          prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 8, 8);
+          mat_qkt.compute_root();
+          mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 8, 8);
+        } else if (SCHEDULE == 7) {
+          Var so, si, no, ni, d_o, di;
+          Var nqo, nqi, nko, nki;
+          output.compute_root();
+          mat_qkt.compute_root();
+          mat_qkt.update(0).gpu_tile(nq, nk, nqo, nko, nqi, nki, 16, 16);
+          mat_qkt.update(0).reorder(nqi, nki, nqo, nko);
+          prod_qkt.compute_root();
+          prod_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 16, 16);
+          prod_qkt.reorder(nqi, nki, nqo, nko, s);
+          mat_q.compute_at(prod_qkt, nqi);
+          mat_q.update(0).reorder(n, s);
+          prod_q.compute_at(mat_q, n);
+          prod_q.reorder(d, n, s);
+          mat_k.compute_at(prod_qkt, nki);
+          mat_k.update(0).reorder(n, s);
+          prod_k.compute_at(mat_k, n);
+          prod_k.reorder(d, n, s);
         }
 
-        mat_qkt.print_loop_nest();
+        output.print_loop_nest();
     }
 
 private:

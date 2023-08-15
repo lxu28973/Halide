@@ -17,7 +17,7 @@ add_halide_generator(toy_app.generator SOURCES toy_app.cpp)
 # Filters
 add_halide_library(toy_app FROM toy_app.generator
                     TARGETS host
-                    FEATURES metal
+                    FEATURES cuda cuda_capability_86
                    STMT toy_app.stmt
                    STMT_HTML toy_app.html
                    COMPILER_LOG toy_app.log)

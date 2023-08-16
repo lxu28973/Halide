@@ -350,11 +350,10 @@ public:
           mat_qkt.update(0).split(nk, nko, nki, 16);
           mat_qkt.update(0).split(sdim, sdimo, sdimi, 16);
           mat_qkt.update(0).gpu_blocks(nqo);
-//          mat_qkt.update(0).gpu_lanes(nko);
           mat_qkt.update(0).gpu_threads(nki);
           mat_qkt.update(0).gpu_threads(nqi);
           mat_qkt.update(0).reorder(sdimi, nqi, nki, nko, sdimo, nqo);
-          prod_qkt.compute_at(mat_qkt, sdimo);
+          prod_qkt.compute_at(mat_qkt, nko);
           prod_qkt.gpu_threads(nq, nk);
           prod_qkt.reorder(s, nq, nk);
           prod_qkt.store_in(Halide::MemoryType::GPUShared);

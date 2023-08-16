@@ -13,7 +13,7 @@ using namespace Halide::Runtime;
 // N: Token number
 // D: Token dimension
 // S: Hidden layer size
-const int N = 512, D = 64, S = 256;
+const int N = 512, D = 512, S = 256;
 const float HI = 1, LO = -1;
 
 int main(int argc, char **argv) {

@@ -16,7 +16,7 @@ public:
     // N: Token number
     // D: Token dimension
     // S: Hidden layer size
-    const int N = 512, D = 64, S = 256;
+    const int N = 512, D = 512, S = 256;
 
     void generate() {
         /* THE ALGORITHM */
@@ -293,8 +293,6 @@ public:
           mat_q.update(0).tile(no, so, ni, si, 4, 4);
           mat_q.update(0).gpu_blocks(n, s);
           mat_q.update(0).gpu_threads(no, so);
-          mat_q.update(0).unroll(ni);
-          mat_q.update(0).unroll(si);
           mat_q.update(0).reorder(ni, si, no, so, n, s);
           prod_q.compute_at(mat_q, ni);
           prod_q.reorder(d, n, s);
@@ -303,8 +301,6 @@ public:
           mat_k.update(0).tile(no, so, ni, si, 4, 4);
           mat_k.update(0).gpu_blocks(n, s);
           mat_k.update(0).gpu_threads(no, so);
-          mat_k.update(0).unroll(ni);
-          mat_k.update(0).unroll(si);
           mat_k.update(0).reorder(ni, si, no, so, n, s);
           prod_k.compute_at(mat_k, ni);
           prod_k.reorder(d, n, s);

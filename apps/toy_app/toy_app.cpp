@@ -318,11 +318,9 @@ public:
           mat_qkt.update(0).gpu_blocks(nqo, nko);
           mat_qkt.update(0).gpu_threads(nqi, nki);
           mat_qkt.update(0).reorder(sdimi, nqi, nki, sdimo, nqo, nko, nq, nk);
-          prod_qkt.compute_at(mat_qkt, nqo);
-          prod_qkt.tile(nq, nk, nqo, nko, 4, 4);
-          prod_qkt.split(s, so, si, 16);
-          prod_qkt.gpu_threads(so, nq, nk);
-          prod_qkt.reorder(si, nqo, nko, so, nq, nk);
+          prod_qkt.compute_at(mat_qkt, sdimi);
+          prod_qkt.reorder(s, nq, nk);
+          prod_qkt.store_in(Halide::MemoryType::GPUShared);
           mat_q.compute_root();
           mat_q.update(0).tile(n, s, no, so, 16, 16);
           mat_q.update(0).tile(no, so, ni, si, 4, 4);

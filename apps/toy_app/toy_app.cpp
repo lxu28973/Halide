@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 12;
+const int SCHEDULE = 13;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -288,6 +288,41 @@ public:
           mat_qkt.update(0).reorder(sdimi, nqi, nki, sdimo, nqo, nko, nq, nk);
           prod_qkt.compute_at(mat_qkt, nqi);
           prod_qkt.reorder(s, nq, nk);
+          mat_q.compute_root();
+          mat_q.update(0).tile(n, s, no, so, 16, 16);
+          mat_q.update(0).tile(no, so, ni, si, 4, 4);
+          mat_q.update(0).gpu_blocks(n, s);
+          mat_q.update(0).gpu_threads(no, so);
+          mat_q.update(0).reorder(ni, si, no, so, n, s);
+          prod_q.compute_at(mat_q, ni);
+          prod_q.reorder(d, n, s);
+          mat_k.compute_root();
+          mat_k.update(0).tile(n, s, no, so, 16, 16);
+          mat_k.update(0).tile(no, so, ni, si, 4, 4);
+          mat_k.update(0).gpu_blocks(n, s);
+          mat_k.update(0).gpu_threads(no, so);
+          mat_k.update(0).reorder(ni, si, no, so, n, s);
+          prod_k.compute_at(mat_k, ni);
+          prod_k.reorder(d, n, s);
+        } else if (SCHEDULE == 13) {
+          Var so, si, no, ni, d_o, di;
+          Var nqo, nqi, nko, nki;
+          RVar sdimo, sdimi;
+          output.compute_root();
+          mat_qkt.compute_root();
+          mat_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
+          mat_qkt.reorder(nqi, nki, nqo, nko);
+          mat_qkt.update(0).tile(nq, nk, nqo, nko, 64, 64);
+          mat_qkt.update(0).tile(nqo, nko, nqi, nki, 16, 16);
+          mat_qkt.update(0).split(sdim, sdimo, sdimi, 16);
+          mat_qkt.update(0).gpu_blocks(nqo, nko);
+          mat_qkt.update(0).gpu_threads(nqi, nki);
+          mat_qkt.update(0).reorder(sdimi, nqi, nki, sdimo, nqo, nko, nq, nk);
+          prod_qkt.compute_at(mat_qkt, nqo);
+          prod_qkt.tile(nq, nk, nqo, nko, 4, 4);
+          prod_qkt.split(s, so, si, 16);
+          prod_qkt.gpu_threads(so, nq, nk);
+          prod_qkt.reorder(si, nqo, nko, so, nq, nk);
           mat_q.compute_root();
           mat_q.update(0).tile(n, s, no, so, 16, 16);
           mat_q.update(0).tile(no, so, ni, si, 4, 4);

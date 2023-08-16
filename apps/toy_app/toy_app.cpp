@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 13;
+const int SCHEDULE = 14;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -318,6 +318,42 @@ public:
           mat_qkt.update(0).gpu_blocks(nqo, nko);
           mat_qkt.update(0).gpu_threads(nqi, nki);
           mat_qkt.update(0).reorder(sdimi, nqi, nki, sdimo, nqo, nko, nq, nk);
+          prod_qkt.compute_at(mat_qkt, sdimo);
+          prod_qkt.gpu_threads(nq, nk);
+          prod_qkt.reorder(s, nq, nk);
+          prod_qkt.store_in(Halide::MemoryType::GPUShared);
+          mat_q.compute_root();
+          mat_q.update(0).tile(n, s, no, so, 16, 16);
+          mat_q.update(0).tile(no, so, ni, si, 4, 4);
+          mat_q.update(0).gpu_blocks(n, s);
+          mat_q.update(0).gpu_threads(no, so);
+          mat_q.update(0).reorder(ni, si, no, so, n, s);
+          prod_q.compute_at(mat_q, ni);
+          prod_q.reorder(d, n, s);
+          mat_k.compute_root();
+          mat_k.update(0).tile(n, s, no, so, 16, 16);
+          mat_k.update(0).tile(no, so, ni, si, 4, 4);
+          mat_k.update(0).gpu_blocks(n, s);
+          mat_k.update(0).gpu_threads(no, so);
+          mat_k.update(0).reorder(ni, si, no, so, n, s);
+          prod_k.compute_at(mat_k, ni);
+          prod_k.reorder(d, n, s);
+        } else if (SCHEDULE == 14) {
+          Var so, si, no, ni, d_o, di;
+          Var nqo, nqi, nko, nki;
+          RVar sdimo, sdimi;
+          output.compute_root();
+          mat_qkt.compute_root();
+          mat_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
+          mat_qkt.reorder(nqi, nki, nqo, nko);
+          mat_qkt.update(0).split(nq, nqo, nqi, 16);
+          mat_qkt.update(0).split(nk, nko, nki, 16);
+          mat_qkt.update(0).split(sdim, sdimo, sdimi, 16);
+          mat_qkt.update(0).gpu_blocks(nqo);
+//          mat_qkt.update(0).gpu_lanes(nko);
+          mat_qkt.update(0).gpu_threads(nki);
+          mat_qkt.update(0).gpu_threads(nqi);
+          mat_qkt.update(0).reorder(sdimi, nqi, nki, nko, sdimo, nqo);
           prod_qkt.compute_at(mat_qkt, sdimo);
           prod_qkt.gpu_threads(nq, nk);
           prod_qkt.reorder(s, nq, nk);

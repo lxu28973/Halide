@@ -433,11 +433,12 @@ public:
           mat_q.compute_at(mat_qkt, nk);
           mat_q.tile(s, n, so, no, 16, 16);
           mat_q.gpu_threads(so, no);
-          mat_q.update(0).split(ddim, ddimo, ddimi, 2);
-          mat_q.update(0).reorder(ddimi, s, n, ddimo);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 4);
           mat_q.update(0).tile(s, n, so, no, 16, 16);
+          mat_q.update(0).tile(so, no, si, ni, 2, 2);
+          mat_q.update(0).reorder(ddimi, si, ni, so, no, s, n, ddimo);
           mat_q.update(0).gpu_threads(so, no);
-          prod_q.compute_at(mat_q, ddimo);
+          prod_q.compute_at(mat_q, s);
           prod_q.split(s, so, si, 16);
           prod_q.gpu_threads(si, n, d);
           prod_q.reorder(si, n, so, d);

@@ -375,12 +375,13 @@ public:
           mat_k.gpu_tile(n, s, no, so, 16, 16)
                .reorder(no, so, n, s);
           mat_k.update(0).tile(n, s, no, so, 16, 16)
-                         .tile(no, so, ni, si, 4, 4)
                          .gpu_blocks(n, s)
                          .gpu_threads(no, so)
                          .split(ddim, ddimo, ddimi, 8)
-                         .reorder(ddimi, ni, si, ddimo, no, so, n, s);
-          prod_k.compute_at(mat_k, ni);
+                         .reorder(ddimi, no, so, ddimo, n, s);
+          prod_k.compute_at(mat_k, ddimo);
+          prod_k.store_in(Halide::MemoryType::GPUShared);
+          prod_k.gpu_threads(d, n, s);
           prod_k.reorder(d, n, s);
           input.in(prod_k).store_in(Halide::MemoryType::GPUShared);
           weight_k.in(prod_k).store_in(Halide::MemoryType::GPUShared);

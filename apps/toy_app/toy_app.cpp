@@ -344,6 +344,35 @@ public:
           RVar sdimo{"sdimo"}, sdimi{"sdimi"};
           RVar ddimo{"ddimo"}, ddimi{"ddimi"};
           output.compute_root();
+          output.tile(nq, nk, nqo, nko, 16, 16);
+          output.reorder(nko, nqo, nk, nq);
+          output.gpu_blocks(nk, nq);
+          mat_qkt.compute_at(output, nk);
+          mat_qkt.update(0).split(sdim, sdim, sdimo, 16).split(sdimo, sdimo, sdimi, 4).reorder(sdimi, sdimo, nk, nq, sdim).unroll(sdimo);
+          prod_qkt.compute_at(mat_qkt, sdim);
+          prod_qkt.gpu_threads(nq, nk);
+          prod_qkt.reorder(nq, nk, s);
+          mat_q.compute_at(output, nk);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 16);
+          mat_q.update(0).reorder(ddimi, s, n, ddimo);
+          prod_q.compute_at(mat_q, ddimo);
+          prod_q.gpu_threads(s, n);
+          prod_q.reorder(d, s, n);
+          mat_k.compute_root();
+          mat_k.update(0).tile(n, s, no, so, 16, 16)
+              .gpu_blocks(n, s)
+              .gpu_threads(no, so)
+              .split(ddim, ddimo, ddimi, 16)
+              .reorder(no, so, ddimi, ddimo, n, s);
+          prod_k.compute_at(mat_k, ddimi);
+          prod_k.gpu_threads(n, s);
+          prod_k.reorder(n, s, d);
+        } else if (SCHEDULE == 15) {
+          Var so{"so"}, si{"si"}, no{"no"}, ni{"ni"}, d_o{"do"}, di{"di"};
+          Var nqo{"nqo"}, nqi{"nqi"}, nko{"nko"}, nki{"nki"};
+          RVar sdimo{"sdimo"}, sdimi{"sdimi"};
+          RVar ddimo{"ddimo"}, ddimi{"ddimi"};
+          output.compute_root();
           mat_qkt.compute_root();
           mat_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
           mat_qkt.reorder(nqi, nki, nqo, nko);

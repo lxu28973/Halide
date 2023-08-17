@@ -368,6 +368,8 @@ public:
           prod_q.store_in(Halide::MemoryType::GPUShared);
           prod_q.gpu_threads(s, n);
           prod_q.reorder(s, n, d);
+          input.in(prod_q).store_in(Halide::MemoryType::GPUShared);
+          weight_q.in(prod_q).store_in(Halide::MemoryType::GPUShared);
           mat_k.compute_root();
           mat_k.update(0).tile(n, s, no, so, 16, 16);
           mat_k.update(0).tile(no, so, ni, si, 4, 4);

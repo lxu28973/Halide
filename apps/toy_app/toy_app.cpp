@@ -358,6 +358,7 @@ public:
           prod_qkt.gpu_threads(nq, nk);
           prod_qkt.reorder(s, nq, nk);
           prod_qkt.store_in(Halide::MemoryType::GPUShared);
+          mat_k.in(prod_qkt).store_in(Halide::MemoryType::GPUShared);
           mat_q.compute_at(mat_qkt, nko);
           mat_q.store_in(Halide::MemoryType::GPUShared);
           mat_q.gpu_threads(n, s);
@@ -371,13 +372,18 @@ public:
           input.in(prod_q).store_in(Halide::MemoryType::GPUShared);
           weight_q.in(prod_q).store_in(Halide::MemoryType::GPUShared);
           mat_k.compute_root();
-          mat_k.update(0).tile(n, s, no, so, 16, 16);
-          mat_k.update(0).tile(no, so, ni, si, 4, 4);
-          mat_k.update(0).gpu_blocks(n, s);
-          mat_k.update(0).gpu_threads(no, so);
-          mat_k.update(0).reorder(ni, si, no, so, n, s);
+          mat_k.gpu_tile(n, s, no, so, 16, 16)
+               .reorder(no, so, n, s);
+          mat_k.update(0).tile(n, s, no, so, 16, 16)
+                         .tile(no, so, ni, si, 4, 4)
+                         .gpu_blocks(n, s)
+                         .gpu_threads(no, so)
+                         .split(ddim, ddimo, ddimi, 8)
+                         .reorder(ddimi, ni, si, ddimo, no, so, n, s);
           prod_k.compute_at(mat_k, ni);
           prod_k.reorder(d, n, s);
+          input.in(prod_k).store_in(Halide::MemoryType::GPUShared);
+          weight_k.in(prod_k).store_in(Halide::MemoryType::GPUShared);
         }
 
         output.print_loop_nest();

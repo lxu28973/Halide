@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 14;
+const int SCHEDULE = 16;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -344,16 +344,16 @@ public:
           RVar sdimo{"sdimo"}, sdimi{"sdimi"};
           RVar ddimo{"ddimo"}, ddimi{"ddimi"};
           output.compute_root();
-          output.tile(nq, nk, nqo, nko, 16, 16);
+          output.tile(nq, nk, nqo, nko, 8, 8);
           output.reorder(nko, nqo, nk, nq);
           output.gpu_blocks(nk, nq);
           mat_qkt.compute_at(output, nk);
-          mat_qkt.update(0).split(sdim, sdim, sdimo, 16).split(sdimo, sdimo, sdimi, 4).reorder(sdimi, sdimo, nk, nq, sdim).unroll(sdimo);
+          mat_qkt.update(0).split(sdim, sdim, sdimo, 8).split(sdimo, sdimo, sdimi, 4).reorder(sdimi, sdimo, nk, nq, sdim);
           prod_qkt.compute_at(mat_qkt, sdim);
           prod_qkt.gpu_threads(nq, nk);
           prod_qkt.reorder(nq, nk, s);
           mat_q.compute_at(output, nk);
-          mat_q.update(0).split(ddim, ddimo, ddimi, 16);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 8);
           mat_q.update(0).reorder(ddimi, s, n, ddimo);
           prod_q.compute_at(mat_q, ddimo);
           prod_q.gpu_threads(s, n);
@@ -414,6 +414,37 @@ public:
           prod_k.reorder(d, n, s);
           input.in(prod_k).store_in(Halide::MemoryType::GPUShared);
           weight_k.in(prod_k).store_in(Halide::MemoryType::GPUShared);
+        } else if (SCHEDULE == 16) {
+          Var so{"so"}, si{"si"}, no{"no"}, ni{"ni"}, d_o{"do"}, di{"di"};
+          Var nqo{"nqo"}, nqi{"nqi"}, nko{"nko"}, nki{"nki"};
+          RVar sdimo{"sdimo"}, sdimi{"sdimi"};
+          RVar ddimo{"ddimo"}, ddimi{"ddimi"};
+          mat_qkt.compute_root();
+          mat_qkt.tile(nq, nk, nqo, nko, 8, 8);
+          mat_qkt.reorder(nko, nqo, nk, nq);
+          mat_qkt.gpu_blocks(nk, nq);
+          mat_qkt.update(0).tile(nq, nk, nqo, nko, 8, 8);
+          mat_qkt.update(0).gpu_blocks(nk, nq);
+          mat_qkt.update(0).split(sdim, sdim, sdimi, 8).reorder(sdimi, nko, nqo, sdim, nk, nq);
+          prod_qkt.compute_at(mat_qkt, sdim);
+          prod_qkt.gpu_threads(nq, nk, s);
+          prod_qkt.reorder(nq, nk, s);
+          mat_q.compute_at(mat_qkt, nk);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 8);
+          mat_q.update(0).reorder(ddimi, s, n, ddimo);
+          prod_q.compute_at(mat_q, ddimo);
+          prod_q.split(s, so, si, 32);
+          prod_q.gpu_threads(si, n);
+          prod_q.reorder(d, si, n, so);
+          mat_k.compute_root();
+          mat_k.update(0).tile(n, s, no, so, 16, 16)
+              .gpu_blocks(n, s)
+              .gpu_threads(no, so)
+              .split(ddim, ddimo, ddimi, 16)
+              .reorder(no, so, ddimi, ddimo, n, s);
+          prod_k.compute_at(mat_k, ddimi);
+          prod_k.gpu_threads(n, s);
+          prod_k.reorder(n, s, d);
         }
 
         output.print_loop_nest();

@@ -339,9 +339,9 @@ public:
           prod_k.compute_at(mat_k, ni);
           prod_k.reorder(d, n, s);
         } else if (SCHEDULE == 14) {
-          Var so, si, no, ni, d_o, di;
-          Var nqo, nqi, nko, nki;
-          RVar sdimo, sdimi;
+          Var so{"so"}, si{"si"}, no{"no"}, ni{"ni"}, d_o{"do"}, di{"di"};
+          Var nqo{"nqo"}, nqi{"nqi"}, nko{"nko"}, nki{"nki"};
+          RVar sdimo{"sdimo"}, sdimi{"sdimi"};
           output.compute_root();
           mat_qkt.compute_root();
           mat_qkt.gpu_tile(nq, nk, nqo, nko, nqi, nki, 32, 32);
@@ -357,14 +357,12 @@ public:
           prod_qkt.gpu_threads(nq, nk);
           prod_qkt.reorder(s, nq, nk);
           prod_qkt.store_in(Halide::MemoryType::GPUShared);
-          mat_q.compute_root();
-          mat_q.update(0).tile(n, s, no, so, 16, 16);
-          mat_q.update(0).tile(no, so, ni, si, 4, 4);
-          mat_q.update(0).gpu_blocks(n, s);
-          mat_q.update(0).gpu_threads(no, so);
-          mat_q.update(0).reorder(ni, si, no, so, n, s);
-          prod_q.compute_at(mat_q, ni);
-          prod_q.reorder(d, n, s);
+          mat_q.compute_at(prod_qkt, s);
+          mat_q.store_in(Halide::MemoryType::GPUShared);
+          mat_q.update(0).reorder(ddim, s, n);
+          prod_q.compute_at(mat_q, s);
+          prod_q.gpu_threads(d);
+          prod_q.reorder(d, s, n);
           mat_k.compute_root();
           mat_k.update(0).tile(n, s, no, so, 16, 16);
           mat_k.update(0).tile(no, so, ni, si, 4, 4);
@@ -381,9 +379,9 @@ public:
 private:
     Var n{"n"}, d{"d"}, s{"s"};
     Var nq{"nq"}, nk{"nk"};
-    RDom ddim{0, D};
-    RDom sdim{0, S};
-    RDom ndim{0, N};
+    RDom ddim{0, D, "ddim"};
+    RDom sdim{0, S, "sdim"};
+    RDom ndim{0, N, "ndim"};
 
     Func prod_q{"prod_q"};
     Func prod_k{"prod_k"};

@@ -484,16 +484,14 @@ public:
           mat_q.update(0).tile(s, n, so, no, 1, 1);
           mat_q.update(0).reorder(ddimi, so, no, s, n, ddimo);
           mat_q.update(0).gpu_threads(s, n);
-          Func mat_k_global = mat_k.in(prod_qkt);
-          mat_k_global.compute_root();
-          mat_k_global.tile(n, s, no, so, ni, si, 64, 64);
-          mat_k_global.gpu_blocks(no, so);
-          mat_k_global.reorder(si, ni, so, no);
-          mat_k.compute_at(mat_k_global, so);
-          mat_k.update(0).tile(n, s, no, so, 8, 8)
-              .gpu_threads(no, so)
-              .split(ddim, ddimo, ddimi, 8)
-              .reorder(ddimi, no, so, ddimo, n, s);
+          mat_k.compute_root();
+          mat_k.store_in(Halide::MemoryType::GPUShared);
+          mat_k.update(0).tile(n, s, no, so, 64, 64)
+              .gpu_blocks(n, s)
+              .tile(no, so, ni, si, 16, 16)
+              .gpu_threads(ni, si)
+              .split(ddim, ddimo, ddimi, 16)
+              .reorder(ddimi, ni, si, no, so, ddimo, n, s);
         }
 
         output.print_loop_nest();

@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 16;
+const int SCHEDULE = 17;
 
 class ToyApp : public Halide::Generator<ToyApp> {
 public:
@@ -436,6 +436,34 @@ public:
           prod_q.split(s, so, si, 16);
           prod_q.gpu_threads(si, n);
           prod_q.reorder(si, n, so, d);
+          mat_k.compute_root();
+          mat_k.update(0).tile(n, s, no, so, 16, 16)
+              .gpu_blocks(n, s)
+              .gpu_threads(no, so)
+              .split(ddim, ddimo, ddimi, 16)
+              .reorder(no, so, ddimi, ddimo, n, s);
+          prod_k.compute_at(mat_k, ddimi);
+          prod_k.gpu_threads(n, s);
+          prod_k.reorder(n, s, d);
+        } else if (SCHEDULE == 17) {
+          Var so{"so"}, si{"si"}, no{"no"}, ni{"ni"}, d_o{"do"}, di{"di"};
+          Var nqo{"nqo"}, nqi{"nqi"}, nko{"nko"}, nki{"nki"};
+          RVar sdimo{"sdimo"}, sdimi{"sdimi"};
+          RVar ddimo{"ddimo"}, ddimi{"ddimi"};
+          mat_qkt.compute_root();
+          mat_qkt.update(0).tile(nq, nk, nqo, nko, 4, 16);
+          mat_qkt.update(0).gpu_blocks(nq);
+          mat_qkt.update(0).gpu_threads(nk);
+          mat_qkt.update(0).split(sdim, sdim, sdimi, 16).reorder(sdimi, nko, nqo, sdim, nk, nq);
+          prod_qkt.compute_at(mat_qkt, sdim);
+          prod_qkt.gpu_threads(nk);
+          prod_qkt.reorder(nq, nk, s);
+          mat_q.compute_at(mat_qkt, nq);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 16);
+          mat_q.update(0).tile(s, n, so, no, 2, 2);
+          mat_q.update(0).reorder(ddimi, so, no, s, n, ddimo);
+          mat_q.update(0).gpu_threads(s, n);
+          prod_q.compute_at(mat_q, s);
           mat_k.compute_root();
           mat_k.update(0).tile(n, s, no, so, 16, 16)
               .gpu_blocks(n, s)

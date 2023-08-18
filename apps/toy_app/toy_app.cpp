@@ -484,9 +484,13 @@ public:
           mat_q.update(0).tile(s, n, so, no, 1, 1);
           mat_q.update(0).reorder(ddimi, so, no, s, n, ddimo);
           mat_q.update(0).gpu_threads(s, n);
-          mat_k.compute_root();
+          Func mat_k_heap = mat_k.in(prod_qkt);
+          mat_k_heap.compute_root();
+          mat_k_heap.tile(n, s, ni, si, 256, 256);
+          mat_k_heap.reorder(si, ni, s, n);
+          mat_k.compute_at(mat_k_heap, s);
           mat_k.store_in(Halide::MemoryType::GPUShared);
-          mat_k.update(0).tile(n, s, no, so, 64, 64)
+          mat_k.update(0).tile(n, s, no, so, 16, 16)
               .gpu_blocks(n, s)
               .tile(no, so, ni, si, 16, 16)
               .gpu_threads(ni, si)

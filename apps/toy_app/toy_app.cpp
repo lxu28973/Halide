@@ -451,19 +451,15 @@ public:
           RVar sdimo{"sdimo"}, sdimi{"sdimi"};
           RVar ddimo{"ddimo"}, ddimi{"ddimi"};
           mat_qkt.compute_root();
-          mat_qkt.update(0).tile(nq, nk, nqo, nko, 4, 16);
+          mat_qkt.update(0).tile(nq, nk, nqo, nko, 1, 1);
           mat_qkt.update(0).gpu_blocks(nq);
           mat_qkt.update(0).gpu_threads(nk);
-          mat_qkt.update(0).split(sdim, sdim, sdimi, 16).reorder(sdimi, nko, nqo, sdim, nk, nq);
-          prod_qkt.compute_at(mat_qkt, sdim);
-          prod_qkt.gpu_threads(nk);
-          prod_qkt.reorder(nq, nk, s);
+          mat_qkt.update(0).split(sdim, sdim, sdimi, 2).reorder(sdimi, nko, nqo, sdim, nk, nq);
           mat_q.compute_at(mat_qkt, nq);
-          mat_q.update(0).split(ddim, ddimo, ddimi, 16);
-          mat_q.update(0).tile(s, n, so, no, 2, 2);
+          mat_q.update(0).split(ddim, ddimo, ddimi, 2);
+          mat_q.update(0).tile(s, n, so, no, 1, 1);
           mat_q.update(0).reorder(ddimi, so, no, s, n, ddimo);
           mat_q.update(0).gpu_threads(s, n);
-          prod_q.compute_at(mat_q, s);
           mat_k.compute_root();
           mat_k.update(0).tile(n, s, no, so, 16, 16)
               .gpu_blocks(n, s)

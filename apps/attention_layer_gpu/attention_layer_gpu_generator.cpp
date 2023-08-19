@@ -38,6 +38,26 @@ public:
     mat_sv(b, h, n, ss) += prod_sv(b, h, n, ss, ndim);
 
     output(b, h, n, ss) = mat_sv(b, h, n, ss);
+
+    output.dim(0).set_extent(B);
+    output.dim(1).set_extent(H);
+    output.dim(2).set_extent(N);
+    output.dim(3).set_extent(D);
+
+    input.dim(0).set_extent(B);
+    input.dim(1).set_extent(N);
+    input.dim(2).set_extent(H*D);
+
+    weight_k.dim(0).set_extent(H);
+    weight_k.dim(1).set_extent(H*D);
+    weight_k.dim(2).set_extent(D);
+    weight_q.dim(0).set_extent(H);
+    weight_q.dim(1).set_extent(H*D);
+    weight_q.dim(2).set_extent(D);
+    weight_v.dim(0).set_extent(H);
+    weight_v.dim(1).set_extent(H*D);
+    weight_v.dim(2).set_extent(D);
+
   }
 
   void schedule() {
@@ -250,10 +270,10 @@ public:
       mat_sv.update(0).reorder(bi, hi, ndimi, sst, nt, ssi, ni, ndimo, no, ho, bo, sso);
       mat_sv.update(0).gpu_threads(ssi, ni);
       mat_qkt.in(prod_sv).in(prod_sv).compute_at(mat_sv, ndimo);
-      mat_qkt.in(prod_sv).in(prod_sv).store_in(Halide::MemoryType::Heap);
+      mat_qkt.in(prod_sv).in(prod_sv).store_in(Halide::MemoryType::Stack);
       mat_qkt.in(prod_sv).in(prod_sv).gpu_threads(nq);
       mat_v.in(prod_sv).in(prod_sv).compute_at(mat_sv, ndimo);
-      mat_v.in(prod_sv).in(prod_sv).store_in(Halide::MemoryType::Heap);
+      mat_v.in(prod_sv).in(prod_sv).store_in(Halide::MemoryType::Stack);
       mat_v.in(prod_sv).in(prod_sv).gpu_threads(ss);
 
       mat_qkt.in(prod_sv).compute_root();
@@ -264,7 +284,7 @@ public:
       mat_qkt.in(prod_sv).gpu_blocks(ho, bo, nko);
       mat_qkt.in(prod_sv).gpu_threads(nki, nqi);
       mat_qkt.compute_at(mat_qkt.in(prod_sv), nqo);
-      mat_qkt.store_in(Halide::MemoryType::Heap);
+      mat_qkt.store_in(Halide::MemoryType::Stack);
       mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_qkt.update(0).split(sdim, sdimo, sdimi, 3);
       mat_qkt.update(0).tile(nk, nq, nko, nqo, nki, nqi, 64, 64);
@@ -272,12 +292,12 @@ public:
       mat_qkt.update(0).reorder(bi, hi, sdimi, nqt, nkt, nqi, nki, sdimo, nqo, ho, bo, nko);
       mat_qkt.update(0).gpu_threads(nki, nqi);
       mat_k.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, ho);
-      mat_k.in(prod_qkt).in(prod_qkt).store_in(Halide::MemoryType::Heap);
+      mat_k.in(prod_qkt).in(prod_qkt).store_in(Halide::MemoryType::Stack);
       mat_k.in(prod_qkt).in(prod_qkt).fuse(ss, n, n);
       mat_k.in(prod_qkt).in(prod_qkt).split(n, no, ni, 32);
       mat_k.in(prod_qkt).in(prod_qkt).gpu_threads(ni);
       mat_q.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, sdimo);
-      mat_q.in(prod_qkt).in(prod_qkt).store_in(Halide::MemoryType::Heap);
+      mat_q.in(prod_qkt).in(prod_qkt).store_in(Halide::MemoryType::Stack);
       mat_q.in(prod_qkt).in(prod_qkt).fuse(ss, n, n);
       mat_q.in(prod_qkt).in(prod_qkt).split(n, no, ni, 32);
       mat_q.in(prod_qkt).in(prod_qkt).gpu_threads(ni);
@@ -290,7 +310,7 @@ public:
       mat_v.in(prod_sv).gpu_blocks(sso, bo, no);
       mat_v.in(prod_sv).gpu_threads(ni, ssi);
       mat_v.compute_at(mat_v.in(prod_sv), sso);
-      mat_v.store_in(Halide::MemoryType::Heap);
+      mat_v.store_in(Halide::MemoryType::Stack);
       mat_v.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_v.update(0).split(ddim, ddimo, ddimi, 1);
       mat_v.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
@@ -298,10 +318,10 @@ public:
       mat_v.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_v.update(0).gpu_threads(ni, ssi);
       input.in(prod_v).compute_at(mat_v, ho);
-      input.in(prod_v).store_in(Halide::MemoryType::Heap);
+      input.in(prod_v).store_in(Halide::MemoryType::Stack);
       input.in(prod_v).gpu_threads(_1);
       weight_v.in(prod_v).compute_at(mat_v, ho);
-      weight_v.in(prod_v).store_in(Halide::MemoryType::Heap);
+      weight_v.in(prod_v).store_in(Halide::MemoryType::Stack);
       weight_v.in(prod_v).gpu_threads(_2);
 
       mat_q.in(prod_qkt).compute_root();
@@ -312,7 +332,7 @@ public:
       mat_q.in(prod_qkt).gpu_blocks(sso, bo, no);
       mat_q.in(prod_qkt).gpu_threads(ni, ssi);
       mat_q.compute_at(mat_q.in(prod_qkt), sso);
-      mat_q.store_in(Halide::MemoryType::Heap);
+      mat_q.store_in(Halide::MemoryType::Stack);
       mat_q.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_q.update(0).split(ddim, ddimo, ddimi, 1);
       mat_q.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
@@ -320,10 +340,10 @@ public:
       mat_q.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_q.update(0).gpu_threads(ni, ssi);
       input.in(prod_q).compute_at(mat_q, ho);
-      input.in(prod_q).store_in(Halide::MemoryType::Heap);
+      input.in(prod_q).store_in(Halide::MemoryType::Stack);
       input.in(prod_q).gpu_threads(_1);
       weight_q.in(prod_q).compute_at(mat_q, ho);
-      weight_q.in(prod_q).store_in(Halide::MemoryType::Heap);
+      weight_q.in(prod_q).store_in(Halide::MemoryType::Stack);
       weight_q.in(prod_q).gpu_threads(_2);
 
       mat_k.in(prod_qkt).compute_root();
@@ -334,7 +354,7 @@ public:
       mat_k.in(prod_qkt).gpu_blocks(sso, bo, no);
       mat_k.in(prod_qkt).gpu_threads(ni, ssi);
       mat_k.compute_at(mat_k.in(prod_qkt), sso);
-      mat_k.store_in(Halide::MemoryType::Heap);
+      mat_k.store_in(Halide::MemoryType::Stack);
       mat_k.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_k.update(0).split(ddim, ddimo, ddimi, 1);
       mat_k.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
@@ -342,10 +362,10 @@ public:
       mat_k.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_k.update(0).gpu_threads(ni, ssi);
       input.in(prod_k).compute_at(mat_k, ho);
-      input.in(prod_k).store_in(Halide::MemoryType::Heap);
+      input.in(prod_k).store_in(Halide::MemoryType::Stack);
       input.in(prod_k).gpu_threads(_1);
       weight_k.in(prod_k).compute_at(mat_k, ho);
-      weight_k.in(prod_k).store_in(Halide::MemoryType::Heap);
+      weight_k.in(prod_k).store_in(Halide::MemoryType::Stack);
       weight_k.in(prod_k).gpu_threads(_2);
     }
 

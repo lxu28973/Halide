@@ -17,12 +17,6 @@ using namespace Halide::Runtime;
 const int B = 8, H = 8, N = 2048, D = 96;
 const float HI = 1, LO = -1;
 
-Buffer<float, 3> input(B, N, D * H);
-Buffer<float, 3> weight_q(H, D * H, D);
-Buffer<float, 3> weight_k(H, D * H, D);
-Buffer<float, 3> weight_v(H, D * H, D);
-Buffer<float, 4> output(B, H, N, D);
-
 static float c_input[B][N][D * H];
 static float c_weight_q[H][D * H][D];
 static float c_weight_k[H][D * H][D];
@@ -37,6 +31,12 @@ static float c_weight_v[H][D * H][D];
 
 int main(int argc, char **argv) {
   srand(0);
+
+  Buffer<float, 3> input(B, N, D * H);
+  Buffer<float, 3> weight_q(H, D * H, D);
+  Buffer<float, 3> weight_k(H, D * H, D);
+  Buffer<float, 3> weight_v(H, D * H, D);
+  Buffer<float, 4> output(B, H, N, D);
 
   // randomize input and weight
   for (int z = 0; z < input.channels(); z++) {

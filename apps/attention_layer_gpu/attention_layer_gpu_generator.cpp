@@ -96,6 +96,8 @@ public:
       mat_sv.update(0).reorder(bi, hi, ndimi, sst, nt, ssi, ni, ndimo, no, ho, bo, sso);
       mat_sv.update(0).gpu_blocks(ho, bo, sso);
       mat_sv.update(0).gpu_threads(ssi, ni);
+      mat_qkt.in(prod_sv).in(prod_sv).compute_at(mat_sv, ndimo);
+      mat_v.in(prod_sv).in(prod_sv).compute_at(mat_sv, ndimo);
 
       mat_qkt.compute_root();
       mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -105,7 +107,8 @@ public:
       mat_qkt.update(0).reorder(bi, hi, sdimi, nqt, nkt, nqi, nki, sdimo, nqo, ho, bo, nko);
       mat_qkt.update(0).gpu_blocks(ho, bo, nko);
       mat_qkt.update(0).gpu_threads(nki, nqi);
-      mat_k.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, sdimo);
+      mat_k.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, ho);
+      mat_q.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, sdimo);
 
       mat_v.in(prod_sv).compute_root();
       mat_v.in(prod_sv).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -121,6 +124,8 @@ public:
       mat_v.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 16, 16 / 16);
       mat_v.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_v.update(0).gpu_threads(ni, ssi);
+      input.in(prod_v).compute_at(mat_v, ho);
+      weight_v.in(prod_v).compute_at(mat_v, ho);
 
       mat_q.in(prod_qkt).compute_root();
       mat_q.in(prod_qkt).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -136,6 +141,8 @@ public:
       mat_q.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 16, 16 / 16);
       mat_q.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_q.update(0).gpu_threads(ni, ssi);
+      input.in(prod_q).compute_at(mat_q, ho);
+      weight_q.in(prod_q).compute_at(mat_q, ho);
 
       mat_k.in(prod_qkt).compute_root();
       mat_k.in(prod_qkt).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -151,17 +158,9 @@ public:
       mat_k.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 16, 16 / 16);
       mat_k.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
       mat_k.update(0).gpu_threads(ni, ssi);
+      input.in(prod_k).compute_at(mat_k, ho);
+      weight_k.in(prod_k).compute_at(mat_k, ho);
 
-//      mat_q.compute_root();
-//      mat_q.tile(b, h, bo, ho, bi, hi, 1, 1);
-//      mat_q.split(ddim, ddimo, ddimi, 1);
-//      mat_q.tile(n, ss, no, sso, ni, ssi, 64, 16);
-//      mat_q.reorder(ho, ddimo, sso, bo, no);
-//      mat_k.compute_root();
-//      mat_k.tile(b, h, bo, ho, bi, hi, 1, 1);
-//      mat_k.split(ddim, ddimo, ddimi, 1);
-//      mat_k.tile(n, ss, no, sso, ni, ssi, 64, 16);
-//      mat_k.reorder(ho, ddimo, sso, bo, no);
     }
 
     output.print_loop_nest();

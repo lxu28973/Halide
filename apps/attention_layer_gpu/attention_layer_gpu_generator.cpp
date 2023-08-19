@@ -122,9 +122,13 @@ public:
       mat_qkt.update(0).reorder(bi, hi, sdimi, nqt, nkt, nqi, nki, sdimo, nqo, ho, bo, nko);
       mat_qkt.update(0).gpu_threads(nki, nqi);
       mat_k.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, ho);
-      mat_k.in(prod_qkt).in(prod_qkt).gpu_threads(n);
+      mat_k.in(prod_qkt).in(prod_qkt).fuse(ss, n, n);
+      mat_k.in(prod_qkt).in(prod_qkt).split(n, no, ni, 32);
+      mat_k.in(prod_qkt).in(prod_qkt).gpu_threads(ni);
       mat_q.in(prod_qkt).in(prod_qkt).compute_at(mat_qkt, sdimo);
-      mat_q.in(prod_qkt).in(prod_qkt).gpu_threads(n);
+      mat_q.in(prod_qkt).in(prod_qkt).fuse(ss, n, n);
+      mat_q.in(prod_qkt).in(prod_qkt).split(n, no, ni, 32);
+      mat_q.in(prod_qkt).in(prod_qkt).gpu_threads(ni);
 
       mat_v.in(prod_sv).compute_root();
       mat_v.in(prod_sv).tile(b, h, bo, ho, bi, hi, 1, 1);

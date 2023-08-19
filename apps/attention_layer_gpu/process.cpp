@@ -23,7 +23,7 @@ Buffer<float, 3> weight_k(H, D * H, D);
 Buffer<float, 3> weight_v(H, D * H, D);
 Buffer<float, 4> output(B, H, N, D);
 
-static float c_input[B][N][D];
+static float c_input[B][N][D * H];
 static float c_weight_q[H][D * H][D];
 static float c_weight_k[H][D * H][D];
 static float c_weight_v[H][D * H][D];
@@ -33,9 +33,7 @@ static float mat_q[B][H][N][D] = {0};
 static float mat_k[B][H][N][D] = {0};
 static float mat_v[B][H][N][D] = {0};
 static float mat_qkt[B][H][N][N] = {0};
-static float softmax[B][H][N][N] = {0};
 static float mat_sv[B][H][N][D] = {0};
-static float concat[B][N][H * D] = {0};
 
 int main(int argc, char **argv) {
   srand(0);
@@ -97,27 +95,9 @@ int main(int argc, char **argv) {
   for (int b = 0; b < B; b++) {
     for (int h = 0; h < H; ++h) {
       for (int n = 0; n < N; ++n) {
-        float exp_max = -std::numeric_limits<float>::infinity();
-        float normalizer = 0;
-        for (int d = 0; d < N; ++d) {
-          exp_max = std::max(exp_max, mat_qkt[b][h][n][d]);
-        }
-        for (int d = 0; d < N; ++d) {
-          normalizer += expf(mat_qkt[b][h][n][d] - exp_max);
-        }
-        for (int d = 0; d < N; ++d) {
-          softmax[b][h][n][d] += expf(mat_qkt[b][h][n][d] - exp_max) / normalizer;
-        }
-      }
-    }
-  }
-
-  for (int b = 0; b < B; b++) {
-    for (int h = 0; h < H; ++h) {
-      for (int n = 0; n < N; ++n) {
         for (int s = 0; s < D; ++s) {
           for (int d = 0; d < N; ++d) {
-            mat_sv[b][h][n][s] += softmax[b][h][n][d] * mat_v[b][h][d][s];
+            mat_sv[b][h][n][s] += mat_qkt[b][h][n][d] * mat_v[b][h][d][s];
           }
         }
       }
@@ -145,26 +125,25 @@ int main(int argc, char **argv) {
           float error = output(b, h, n, d) - c_output[b][h][n][d];
           // It's floating-point math, so we'll allow some slop:
           if (error < -0.001f || error > 0.001f) {
-            printf("halide_manually_tuned_result(%d, %d, %d) = %f instead of %f\n",
-                   b, n, d, output(b, h, n, d), c_output[b][h][n][d]);
+            printf("halide_manually_tuned_result(%d, %d, %d, %d) = %f instead of %f\n",
+                   b, h, n, d, output(b, h, n, d), c_output[b][h][n][d]);
 //                    return -1;
           }
         }
       }
     }
-
-
-    // Timing code
-
-    // Manually-tuned version
-    double min_t_manual = benchmark(2, 2, [&]() {
-      attention_layer_gpu(input, weight_q, weight_k, weight_v, output);
-      output.device_sync();
-    });
-    printf("Manually-tuned time: %gms\n", min_t_manual * 1e3);
-
-    printf("Success!\n");
-    return 0;
   }
 
+
+  // Timing code
+
+  // Manually-tuned version
+  double min_t_manual = benchmark(2, 2, [&]() {
+    attention_layer_gpu(input, weight_q, weight_k, weight_v, output);
+    output.device_sync();
+  });
+  printf("Manually-tuned time: %gms\n", min_t_manual * 1e3);
+
+  printf("Success!\n");
+  return 0;
 }

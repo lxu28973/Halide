@@ -34,12 +34,7 @@ public:
 
     mat_qkt(b, h, nq, nk) += prod_qkt(b, h, nq, nk, sdim);
 
-    exp_max(b, h, nq) = maximum(mat_qkt(b, h, nq, ndim));
-    expo(b, h, nq, nk) = exp(mat_qkt(b, h, nq, nk) - exp_max(b, h, nq));
-    normalizer(b, h, nq) += expo(b, h, nq, ndim);
-    softmax(b, h, nq, nk) = expo(b, h, nq, nk) / normalizer(b, h, nq);
-
-    prod_sv(b, h, nq, s, n) = softmax(b, h, nq, n) * mat_v(b, h, n, s);
+    prod_sv(b, h, nq, s, n) = mat_qkt(b, h, nq, n) * mat_v(b, h, n, s);
     mat_sv(b, h, n, s) += prod_sv(b, h, n, s, ndim);
 
     output(b,h, n, s) = mat_sv(b,h, n, s);
@@ -56,11 +51,7 @@ public:
       mat_v.compute_root();
       prod_qkt.compute_root();
       mat_qkt.compute_root();
-      softmax.compute_root();
       mat_sv.compute_root();
-      expo.compute_root();
-      exp_max.compute_root();
-      normalizer.compute_root();
     } else if (SCHEDULE == 1) {
       // fused qkt and softmax at each qkt row
       prod_q.compute_root();
@@ -69,17 +60,10 @@ public:
       mat_k.compute_root();
       prod_v.compute_root();
       mat_v.compute_root();
-      softmax.compute_root();
       mat_sv.compute_root();
-      softmax.reorder(nk, nq, h, b);
-      expo.reorder(nk, nq, h, b);
-      exp_max.reorder(nq, h, b);
       mat_qkt.reorder(nk, nq, h, b);
       prod_qkt.reorder(s, nk, nq, h, b);
-      normalizer.compute_at(softmax, nq);
-      expo.compute_at(softmax, nq);
-      exp_max.compute_at(softmax, nq);
-      mat_qkt.compute_at(softmax, nq);
+      mat_qkt.compute_at(mat_sv, nq);
       prod_qkt.compute_at(mat_qkt, nk);
     } else if (SCHEDULE == 2) {
       // fused qkt , softmax and sv at each qkt row
@@ -89,40 +73,14 @@ public:
       mat_k.compute_root();
       prod_v.compute_root();
       mat_v.compute_root();
-      softmax.compute_root();
       mat_sv.compute_root();
-      softmax.reorder(nk, nq, h, b);
-      expo.reorder(nk, nq, h, b);
-      exp_max.reorder(nq, h, b);
       mat_qkt.update(0).reorder(nk, nq, h, b);
       prod_qkt.reorder(s, nk, nq, h, b);
-      normalizer.compute_at(softmax, nq);
-      expo.compute_at(softmax, nq);
-      exp_max.compute_at(softmax, nq);
-      mat_qkt.compute_at(softmax, nq);
+      mat_qkt.compute_at(mat_sv, nq);
       prod_qkt.compute_at(mat_qkt, nk);
       prod_sv.reorder(n, s, nq, h, b);
       prod_sv.compute_at(mat_sv, s);
       mat_sv.update(0).reorder(s, n, h, b);
-      softmax.compute_at(mat_sv, n);
-    } else if (SCHEDULE == 3) {
-      prod_q.compute_root();
-      mat_q.compute_root();
-      prod_k.compute_root();
-      mat_k.compute_root();
-      prod_v.compute_root();
-      mat_v.compute_root();
-      prod_qkt.compute_root();
-      mat_qkt.compute_root();
-      softmax.compute_root();
-      mat_sv.compute_root();
-      expo.compute_root();
-      exp_max.compute_root();
-      normalizer.compute_root();
-      prod_q.parallel(h);
-      prod_k.parallel(h);
-      prod_v.parallel(h);
-      prod_qkt.parallel(h);
     }
 
   }
@@ -143,8 +101,6 @@ private:
   Func mat_v{"mat_v"};
   Func prod_qkt{"prod_qkt"};
   Func mat_qkt{"mat_qkt"};
-  Func exp_max{"exp_max"}, expo{"expo"}, normalizer{"normalizer"};
-  Func softmax{"softmax"};
   Func prod_sv{"prod_sv"};
   Func mat_sv{"mat_sv"};
 };

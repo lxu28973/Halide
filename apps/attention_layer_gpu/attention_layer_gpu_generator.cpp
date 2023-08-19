@@ -46,16 +46,16 @@ public:
 
     input.dim(0).set_extent(B);
     input.dim(1).set_extent(N);
-    input.dim(2).set_extent(H*D);
+    input.dim(2).set_extent(H * D);
 
     weight_k.dim(0).set_extent(H);
-    weight_k.dim(1).set_extent(H*D);
+    weight_k.dim(1).set_extent(H * D);
     weight_k.dim(2).set_extent(D);
     weight_q.dim(0).set_extent(H);
-    weight_q.dim(1).set_extent(H*D);
+    weight_q.dim(1).set_extent(H * D);
     weight_q.dim(2).set_extent(D);
     weight_v.dim(0).set_extent(H);
-    weight_v.dim(1).set_extent(H*D);
+    weight_v.dim(1).set_extent(H * D);
     weight_v.dim(2).set_extent(D);
 
   }
@@ -113,7 +113,7 @@ public:
       mat_sv.in(output).tile(ss, n, sso, no, ssi, ni, 96, 64);
       mat_sv.in(output).tile(ssi, ni, ssi, ni, sst, nt, 96 / 32, 64 / 4);
       mat_sv.in(output).reorder(bi, hi, sst, nt, ssi, ni, no, ho, bo, sso);
-      mat_sv.in(output).gpu_blocks(no);
+      mat_sv.in(output).gpu_blocks(no, ho, bo);
       mat_sv.in(output).gpu_threads(ssi, ni);
       mat_sv.compute_at(mat_sv.in(output), no);
       mat_sv.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -132,7 +132,7 @@ public:
       mat_qkt.in(prod_sv).tile(nk, nq, nko, nqo, nki, nqi, 64, 64);
       mat_qkt.in(prod_sv).tile(nki, nqi, nki, nqi, nkt, nqt, 64 / 32, 64 / 4);
       mat_qkt.in(prod_sv).reorder(bi, hi, nqt, nkt, nqi, nki, nqo, ho, bo, nko);
-      mat_qkt.in(prod_sv).gpu_blocks(nko);
+      mat_qkt.in(prod_sv).gpu_blocks(nko, ho, bo);
       mat_qkt.in(prod_sv).gpu_threads(nki, nqi);
       mat_qkt.compute_at(mat_qkt.in(prod_sv), nqo);
       mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -155,7 +155,7 @@ public:
       mat_v.in(prod_sv).tile(n, ss, no, sso, ni, ssi, 64, 16);
       mat_v.in(prod_sv).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
       mat_v.in(prod_sv).reorder(bi, hi, nt, sst, ni, ssi, ho, sso, bo, no);
-      mat_v.in(prod_sv).gpu_blocks(no);
+      mat_v.in(prod_sv).gpu_blocks(bo, no);
       mat_v.in(prod_sv).gpu_threads(ni, ssi);
       mat_v.compute_at(mat_v.in(prod_sv), sso);
       mat_v.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -174,7 +174,7 @@ public:
       mat_q.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 64, 16);
       mat_q.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
       mat_q.in(prod_qkt).reorder(bi, hi, nt, sst, ni, ssi, ho, sso, bo, no);
-      mat_q.in(prod_qkt).gpu_blocks(no);
+      mat_q.in(prod_qkt).gpu_blocks(bo, no);
       mat_q.in(prod_qkt).gpu_threads(ni, ssi);
       mat_q.compute_at(mat_q.in(prod_qkt), sso);
       mat_q.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
@@ -193,7 +193,7 @@ public:
       mat_k.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 64, 16);
       mat_k.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
       mat_k.in(prod_qkt).reorder(bi, hi, nt, sst, ni, ssi, ho, sso, bo, no);
-      mat_k.in(prod_qkt).gpu_blocks(no);
+      mat_k.in(prod_qkt).gpu_blocks(bo, no);
       mat_k.in(prod_qkt).gpu_threads(ni, ssi);
       mat_k.compute_at(mat_k.in(prod_qkt), sso);
       mat_k.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);

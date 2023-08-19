@@ -164,6 +164,8 @@ public:
 //      mat_k.reorder(ho, ddimo, sso, bo, no);
     }
 
+    output.print_loop_nest();
+
   }
 
 private:

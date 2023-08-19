@@ -33,6 +33,7 @@ endif()
 # add_app(HelloPyTorch)  # TODO(#5374): missing CMake build
 # add_app(HelloiOS)  # TODO(#5374): missing CMake build
 add_app(attention_layer)
+add_app(attention_layer_gpu)
 # add_app(auto_viz)  # TODO(#5374): missing CMake build
 add_app(bgu)
 add_app(bilateral_grid)

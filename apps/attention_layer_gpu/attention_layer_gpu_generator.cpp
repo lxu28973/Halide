@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 4;
+const int SCHEDULE = 5;
 
 class AttentionLayerGPU : public Halide::Generator<AttentionLayerGPU> {
 public:
@@ -186,6 +186,52 @@ public:
       input.in(prod_k).gpu_threads(_1);
       weight_k.in(prod_k).compute_at(mat_k, ho);
       weight_k.in(prod_k).gpu_threads(_2);
+
+    } else if (SCHEDULE == 5) {
+      mat_sv.compute_root();
+      mat_sv.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_sv.update(0).split(ndim, ndimo, ndimi, 1);
+      mat_sv.update(0).tile(ss, n, sso, no, ssi, ni, 96, 64);
+      mat_sv.update(0).tile(ssi, ni, ssi, ni, sst, nt, 96 / 32, 64 / 4);
+      mat_sv.update(0).reorder(bi, hi, ndimi, sst, nt, ssi, ni, ndimo, no, ho, bo, sso);
+      mat_sv.update(0).gpu_blocks(ho, bo, sso);
+      mat_sv.update(0).gpu_threads(ssi, ni);
+
+      mat_qkt.compute_root();
+      mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_qkt.update(0).split(sdim, sdimo, sdimi, 3);
+      mat_qkt.update(0).tile(nk, nq, nko, nqo, nki, nqi, 64, 64);
+      mat_qkt.update(0).tile(nki, nqi, nki, nqi, nkt, nqt, 64 / 32, 64 / 4);
+      mat_qkt.update(0).reorder(bi, hi, sdimi, nqt, nkt, nqi, nki, sdimo, nqo, ho, bo, nko);
+      mat_qkt.update(0).gpu_blocks(ho, bo, nko);
+      mat_qkt.update(0).gpu_threads(nki, nqi);
+
+      mat_v.compute_root();
+      mat_v.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_v.update(0).split(ddim, ddimo, ddimi, 1);
+      mat_v.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
+      mat_v.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_v.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
+      mat_v.update(0).gpu_blocks(sso, bo, no);
+      mat_v.update(0).gpu_threads(ni, ssi);
+
+      mat_q.compute_root();
+      mat_q.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_q.update(0).split(ddim, ddimo, ddimi, 1);
+      mat_q.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
+      mat_q.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_q.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
+      mat_q.update(0).gpu_blocks(sso, bo, no);
+      mat_q.update(0).gpu_threads(ni, ssi);
+
+      mat_k.compute_root();
+      mat_k.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_k.update(0).split(ddim, ddimo, ddimi, 1);
+      mat_k.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
+      mat_k.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_k.update(0).reorder(bi, hi, ddimi, nt, sst, ni, ssi, ho, ddimo, sso, bo, no);
+      mat_k.update(0).gpu_blocks(sso, bo, no);
+      mat_k.update(0).gpu_threads(ni, ssi);
 
     }
 

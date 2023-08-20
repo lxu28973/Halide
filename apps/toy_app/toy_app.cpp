@@ -65,13 +65,16 @@ public:
           mat_k_heap.gpu_blocks(n0, s0);
           mat_k_heap.gpu_threads(no, so);
           mat_k.compute_at(mat_k_heap, no);
-          mat_k.store_in(Halide::MemoryType::Register);
+          mat_k.reorder(n0, s0)
+              .vectorize(n0)
+              .unroll(s0);
           mat_k.update(0).split(ddim0, ddimo, ddimi, 8)
-              .reorder(ddimi, n0, s0, ddimo);
-          input.in(prod_k).compute_at(mat_k, ddimo);
-          input.in(prod_k).store_in(Halide::MemoryType::Register);
-          weight_k.in(prod_k).compute_at(mat_k, ddimo);
-          weight_k.in(prod_k).store_in(Halide::MemoryType::Register);
+              .reorder(n0, s0, ddimi, ddimo)
+              .vectorize(n0)
+              .unroll(s0)
+              .unroll(ddimi);
+          input.in(prod_k).compute_at(mat_k, ddimo).vectorize(_0).unroll(_1);
+          weight_k.in(prod_k).compute_at(mat_k, ddimo).vectorize(_0).unroll(_1);
         }
 
         output.print_loop_nest();

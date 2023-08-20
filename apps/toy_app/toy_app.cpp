@@ -63,9 +63,9 @@ public:
           mat_k_heap.gpu_blocks(n0, s0);
           mat_k_heap.reorder(no, so, s0, n0);
           mat_k.compute_at(mat_k_heap, s0);
-          mat_k.update(0).tile(n0, s0, no, so, 16, 16)
+          mat_k.update(0).tile(n0, s0, no, so, 8, 4)
               .split(ddim0, ddimo, ddimi, 16)
-              .gpu_threads(no, so)
+              .gpu_threads(n0, s0)
               .reorder(ddimi, no, so, ddimo, n0, s0);
         }
 

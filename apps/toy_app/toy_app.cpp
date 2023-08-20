@@ -67,6 +67,10 @@ public:
               .split(ddim0, ddimo, ddimi, 16)
               .gpu_threads(n0, s0)
               .reorder(ddimi, no, so, ddimo, n0, s0);
+          input.in(prod_k).compute_at(mat_k, ddimo);
+          input.in(prod_k).store_in(Halide::MemoryType::Register);
+          weight_k.in(prod_k).compute_at(mat_k, ddimo);
+          weight_k.in(prod_k).store_in(Halide::MemoryType::Register);
         }
 
         output.print_loop_nest();

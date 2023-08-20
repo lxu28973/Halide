@@ -59,9 +59,9 @@ public:
           mat_q.update(0).gpu_threads(s0, n0);
           Func mat_k_heap = mat_k.in(prod_qkt);
           mat_k_heap.compute_root();
-          mat_k_heap.tile(n0, s0, no, so, 64, 64);
-          mat_k_heap.tile(no, so, ni, si, 8, 8);
-          mat_k_heap.reorder(ni, si, no, so, s0, n0);
+          mat_k_heap.tile(n0, s0, no, so, 16, 16);
+          mat_k_heap.tile(no, so, ni, si, 4, 4);
+          mat_k_heap.reorder(ni, si, no, so, n0, s0);
           mat_k_heap.gpu_blocks(n0, s0);
           mat_k_heap.gpu_threads(no, so);
           mat_k.compute_at(mat_k_heap, no);

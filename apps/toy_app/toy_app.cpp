@@ -60,13 +60,14 @@ public:
           Func mat_k_heap = mat_k.in(prod_qkt);
           mat_k_heap.compute_root();
           mat_k_heap.tile(n0, s0, no, so, 64, 64);
+          mat_k_heap.tile(no, so, ni, si, 8, 8);
+          mat_k_heap.reorder(ni, si, no, so, s0, n0);
           mat_k_heap.gpu_blocks(n0, s0);
-          mat_k_heap.reorder(no, so, s0, n0);
-          mat_k.compute_at(mat_k_heap, s0);
-          mat_k.update(0).tile(n0, s0, no, so, 8, 4)
-              .split(ddim0, ddimo, ddimi, 16)
-              .gpu_threads(n0, s0)
-              .reorder(ddimi, no, so, ddimo, n0, s0);
+          mat_k_heap.gpu_threads(no, so);
+          mat_k.compute_at(mat_k_heap, no);
+          mat_k.store_in(Halide::MemoryType::Register);
+          mat_k.update(0).split(ddim0, ddimo, ddimi, 8)
+              .reorder(ddimi, n0, s0, ddimo);
           input.in(prod_k).compute_at(mat_k, ddimo);
           input.in(prod_k).store_in(Halide::MemoryType::Register);
           weight_k.in(prod_k).compute_at(mat_k, ddimo);

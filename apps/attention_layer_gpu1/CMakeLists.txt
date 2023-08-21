@@ -16,7 +16,7 @@ add_halide_generator(attention_layer_gpu1.generator SOURCES attention_layer_gpu_
 
 add_halide_library(attention_layer_gpu1 FROM attention_layer_gpu1.generator
                     TARGETS host
-                    FEATURES metal
+                    FEATURES cuda cuda_capability_86
                    STMT attention_gpu.stmt
                    STMT_HTML attention_gpu.html
                    COMPILER_LOG attention_gpu.log)

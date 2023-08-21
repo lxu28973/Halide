@@ -2,7 +2,7 @@
 #include <chrono>
 #include <cstdio>
 
-#include "attention_layer_gpu.h"
+#include "attention_layer_gpu1.h"
 
 #include "HalideBuffer.h"
 #include "halide_benchmark.h"
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
 //  }
 
   // halide run
-  attention_layer_gpu(input, weight_q, weight_k, weight_v, output);
+  attention_layer_gpu1(input, weight_q, weight_k, weight_v, output);
 
   // Check the C and Halide results match:
 //  for (int b = 0; b < B; b++) {
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 
   // Manually-tuned version
   double min_t_manual = benchmark(2, 2, [&]() {
-    attention_layer_gpu(input, weight_q, weight_k, weight_v, output);
+    attention_layer_gpu1(input, weight_q, weight_k, weight_v, output);
     output.device_sync();
   });
   printf("Manually-tuned time: %gs\n", min_t_manual);

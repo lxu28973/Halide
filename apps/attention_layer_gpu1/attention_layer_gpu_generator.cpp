@@ -6,7 +6,7 @@ using namespace Halide;
 
 const int SCHEDULE = 0;
 
-class AttentionLayerGPU : public Halide::Generator<AttentionLayerGPU> {
+class AttentionLayerGPU1 : public Halide::Generator<AttentionLayerGPU1> {
 public:
   Input <Buffer<float, 3>> input{"input"};
   Input <Buffer<float, 3>> weight_q{"weight_q"};
@@ -223,4 +223,4 @@ private:
 
 }  // namespace
 
-HALIDE_REGISTER_GENERATOR(AttentionLayerGPU, attention_layer_gpu)
+HALIDE_REGISTER_GENERATOR(AttentionLayerGPU1, attention_layer_gpu1)

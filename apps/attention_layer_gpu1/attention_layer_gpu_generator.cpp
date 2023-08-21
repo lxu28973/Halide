@@ -4,7 +4,7 @@ namespace {
 
 using namespace Halide;
 
-const int SCHEDULE = 0;
+const int SCHEDULE = 1;
 
 class AttentionLayerGPU1 : public Halide::Generator<AttentionLayerGPU1> {
 public:
@@ -183,7 +183,67 @@ public:
       weight_k.in(prod_k).compute_at(mat_k, ho);
       weight_k.in(prod_k).gpu_threads(_2);
 
-    } else if (SCHEDULE == 5) {
+    } else if (SCHEDULE == 1) {
+      mat_sv.compute_root();
+      mat_sv.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_sv.update(0).split(ndim, ndimo, ndimi, 256);
+      mat_sv.update(0).tile(ss, n, sso, no, ssi, ni, 96, 2048);
+      mat_sv.update(0).tile(ssi, ni, ssi, ni, sst, nt, 96 / 8, 2048 / 16);
+      mat_sv.update(0).tile(sst, nt, sst, nt, ssti, nti, 4, 16);
+      mat_sv.update(0).reorder(nt, sst, ndimi, ssti, nti, ssi, ni, bi, hi, ndimo, no, ho, bo, sso);
+      mat_sv.update(0).gpu_blocks(ssi, ni);
+      mat_sv.update(0).gpu_threads(ssti, nti);
+      mat_sv.update(0).vectorize(nt, 8);
+      mat_sv.update(0).unroll(sst, 8);
+
+      mat_qkt.compute_root();
+      mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_qkt.update(0).split(sdim, sdimo, sdimi, 96);
+      mat_qkt.update(0).tile(nk, nq, nko, nqo, nki, nqi, 2048, 256);
+      mat_qkt.update(0).tile(nki, nqi, nki, nqi, nkt, nqt, 2048 / 32, 256 / 8);
+      mat_qkt.update(0).tile(nkt, nqt, nkt, nqt, nqti, nkti, 16, 16);
+      mat_qkt.update(0).reorder(nqt, nkt, sdimi, nqti, nkti, nqi, nki, bi, hi, sdimo, nqo, ho, bo, nko);
+      mat_qkt.update(0).gpu_blocks(nki, nqi);
+      mat_qkt.update(0).gpu_threads(nkti, nqti);
+      mat_qkt.update(0).vectorize(nqt, 8);
+      mat_qkt.update(0).unroll(nkt, 8);
+      mat_qkt.update(0).unroll(sdimi, 8);
+
+      mat_v.compute_root();
+      mat_v.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_v.update(0).split(ddim, ddimo, ddimi, 1);
+      mat_v.update(0).tile(n, ss, no, sso, ni, ssi, 32, 96);
+      mat_v.update(0).tile(ni, ssi, ni, ssi, nt, sst, 32 / 8, 96 / 12);
+      mat_v.update(0).tile(nt, sst, nt, sst, nti, ssti, 4, 8);
+      mat_v.update(0).reorder(nt, sst, ddimi, nti, ssti, ni, ssi, bi, hi,ho, bo, sso, ddimo, no);
+      mat_v.update(0).gpu_blocks(ni, ssi);
+      mat_v.update(0).gpu_threads(nti, ssti);
+      mat_v.update(0).vectorize(nt);
+      mat_v.update(0).unroll(sst);
+
+      mat_q.compute_root();
+      mat_q.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_q.update(0).split(ddim, ddimo, ddimi, 1);
+      mat_q.update(0).tile(n, ss, no, sso, ni, ssi, 32, 96);
+      mat_q.update(0).tile(ni, ssi, ni, ssi, nt, sst, 32 / 8, 96 / 12);
+      mat_q.update(0).tile(nt, sst, nt, sst, nti, ssti, 4, 8);
+      mat_q.update(0).reorder(nt, sst, ddimi, nti, ssti, ni, ssi, bi, hi,ho, bo, sso, ddimo, no);
+      mat_q.update(0).gpu_blocks(ni, ssi);
+      mat_q.update(0).gpu_threads(nti, ssti);
+      mat_q.update(0).vectorize(nt);
+      mat_q.update(0).unroll(sst);
+
+      mat_k.compute_root();
+      mat_k.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
+      mat_k.update(0).split(ddim, ddimo, ddimi, 384);
+      mat_k.update(0).tile(n, ss, no, sso, ni, ssi, 32, 48);
+      mat_k.update(0).tile(ni, ssi, ni, ssi, nt, sst, 32 / 8, 48 / 6);
+      mat_k.update(0).tile(nt, sst, nt, sst, nti, ssti, 4, 8);
+      mat_k.update(0).reorder(nt, sst, ddimi, nti, ssti, ni, ssi, bi, hi, sso, ho, bo, ddimo, no);
+      mat_k.update(0).gpu_blocks(ni, ssi);
+      mat_k.update(0).gpu_threads(nti, ssti);
+      mat_k.update(0).vectorize(nt);
+      mat_k.update(0).unroll(sst);
     }
 
     output.print_loop_nest();
@@ -195,10 +255,12 @@ private:
   Var bo{"bo"}, ho{"ho"}, no{"no"}, d_o{"d_o"}, sso{"sso"};
   Var bi{"bi"}, hi{"hi"}, ni{"ni"}, d_i{"d_i"}, ssi{"ssi"};
   Var bt{"bt"}, ht{"ht"}, nt{"nt"}, d_t{"d_t"}, sst{"sst"};
+  Var bti{"bti"}, hti{"hti"}, nti{"nti"}, d_ti{"d_ti"}, ssti{"ssti"};
   Var nq{"nq"}, nk{"nk"};
   Var nqo{"nqo"}, nko{"nko"};
   Var nqi{"nqi"}, nki{"nki"};
   Var nqt{"nqt"}, nkt{"nkt"};
+  Var nqti{"nqti"}, nkti{"nkti"};
   RDom ddim{0, D * H, "ddim"};
   RDom sdim{0, D, "sdim"};
   RDom ndim{0, N, "ndim"};

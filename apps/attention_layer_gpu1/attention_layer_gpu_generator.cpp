@@ -65,8 +65,8 @@ public:
     if (SCHEDULE == 0) {
       mat_sv.in(output).compute_root();
       mat_sv.in(output).tile(b, h, bo, ho, bi, hi, 1, 1);
-      mat_sv.in(output).tile(ss, n, sso, no, ssi, ni, 32, 64);
-      mat_sv.in(output).tile(ssi, ni, ssi, ni, sst, nt, 32 / 16, 64 / 4);
+      mat_sv.in(output).tile(ss, n, sso, no, ssi, ni, 32, 32);
+      mat_sv.in(output).tile(ssi, ni, ssi, ni, sst, nt, 32 / 8, 32 / 4);
       mat_sv.in(output).reorder(nt, sst, ssi, ni, bi, hi, no, ho, bo, sso);
       mat_sv.in(output).gpu_blocks(no, ho, bo);
       mat_sv.in(output).gpu_threads(ssi, ni);
@@ -75,8 +75,8 @@ public:
       mat_sv.compute_at(mat_sv.in(output), no);
       mat_sv.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_sv.update(0).split(ndim, ndimo, ndimi, 1);
-      mat_sv.update(0).tile(ss, n, sso, no, ssi, ni, 32, 64);
-      mat_sv.update(0).tile(ssi, ni, ssi, ni, sst, nt, 32 / 16, 64 / 4);
+      mat_sv.update(0).tile(ss, n, sso, no, ssi, ni, 32, 32);
+      mat_sv.update(0).tile(ssi, ni, ssi, ni, sst, nt, 32 / 8, 32 / 4);
       mat_sv.update(0).reorder(nt, sst, ndimi, ssi, ni, bi, hi, ndimo, no, ho, bo, sso);
       mat_sv.update(0).gpu_threads(ssi, ni);
       mat_sv.update(0).vectorize(nt, 8);
@@ -88,8 +88,8 @@ public:
 
       mat_qkt.in(prod_sv).compute_root();
       mat_qkt.in(prod_sv).tile(b, h, bo, ho, bi, hi, 1, 1);
-      mat_qkt.in(prod_sv).tile(nk, nq, nko, nqo, nki, nqi, 64, 64);
-      mat_qkt.in(prod_sv).tile(nki, nqi, nki, nqi, nkt, nqt, 64 / 32, 64 / 4);
+      mat_qkt.in(prod_sv).tile(nk, nq, nko, nqo, nki, nqi, 32, 32);
+      mat_qkt.in(prod_sv).tile(nki, nqi, nki, nqi, nkt, nqt, 32 / 8, 32 / 4);
       mat_qkt.in(prod_sv).reorder(nqt, nkt, nqi, nki, bi, hi, nqo, ho, bo, nko);
       mat_qkt.in(prod_sv).gpu_blocks(nko, ho, bo);
       mat_qkt.in(prod_sv).gpu_threads(nki, nqi);
@@ -98,8 +98,8 @@ public:
       mat_qkt.compute_at(mat_qkt.in(prod_sv), nqo);
       mat_qkt.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_qkt.update(0).split(sdim, sdimo, sdimi, 3);
-      mat_qkt.update(0).tile(nk, nq, nko, nqo, nki, nqi, 64, 64);
-      mat_qkt.update(0).tile(nki, nqi, nki, nqi, nkt, nqt, 64 / 32, 64 / 4);
+      mat_qkt.update(0).tile(nk, nq, nko, nqo, nki, nqi, 32, 32);
+      mat_qkt.update(0).tile(nki, nqi, nki, nqi, nkt, nqt, 32 / 8, 32 / 4);
       mat_qkt.update(0).reorder(nqt, nkt, sdimi, nqi, nki, bi, hi, sdimo, nqo, ho, bo, nko);
       mat_qkt.update(0).gpu_threads(nki, nqi);
       mat_qkt.update(0).vectorize(nqt, 8);
@@ -116,8 +116,8 @@ public:
 
       mat_v.in(prod_sv).compute_root();
       mat_v.in(prod_sv).tile(b, h, bo, ho, bi, hi, 1, 1);
-      mat_v.in(prod_sv).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_v.in(prod_sv).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_v.in(prod_sv).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_v.in(prod_sv).tile(ni, ssi, ni, ssi, nt, sst, 32 / 16, 16 / 4);
       mat_v.in(prod_sv).reorder(nt, sst, ni, ssi, bi, hi, ho, sso, bo, no);
       mat_v.in(prod_sv).gpu_blocks(bo, no);
       mat_v.in(prod_sv).gpu_threads(ni, ssi);
@@ -126,8 +126,8 @@ public:
       mat_v.compute_at(mat_v.in(prod_sv), sso);
       mat_v.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_v.update(0).split(ddim, ddimo, ddimi, 1);
-      mat_v.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_v.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_v.update(0).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_v.update(0).tile(ni, ssi, ni, ssi, nt, sst, 32 / 16, 16 / 4);
       mat_v.update(0).reorder(nt, sst, ddimi, ni, ssi, bi, hi, ho, ddimo, sso, bo, no);
       mat_v.update(0).gpu_threads(ni, ssi);
       mat_v.update(0).vectorize(nt);
@@ -139,8 +139,8 @@ public:
 
       mat_q.in(prod_qkt).compute_root();
       mat_q.in(prod_qkt).tile(b, h, bo, ho, bi, hi, 1, 1);
-      mat_q.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_q.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_q.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_q.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 32 / 16, 16 / 4);
       mat_q.in(prod_qkt).reorder(nt, sst, ni, ssi, bi, hi, ho, sso, bo, no);
       mat_q.in(prod_qkt).gpu_blocks(bo, no);
       mat_q.in(prod_qkt).gpu_threads(ni, ssi);
@@ -149,8 +149,8 @@ public:
       mat_q.compute_at(mat_q.in(prod_qkt), sso);
       mat_q.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_q.update(0).split(ddim, ddimo, ddimi, 1);
-      mat_q.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_q.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_q.update(0).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_q.update(0).tile(ni, ssi, ni, ssi, nt, sst, 32 / 16, 16 / 4);
       mat_q.update(0).reorder(nt, sst, ddimi, ni, ssi, bi, hi, ho, ddimo, sso, bo, no);
       mat_q.update(0).gpu_threads(ni, ssi);
       mat_q.update(0).vectorize(nt);
@@ -162,8 +162,8 @@ public:
 
       mat_k.in(prod_qkt).compute_root();
       mat_k.in(prod_qkt).tile(b, h, bo, ho, bi, hi, 1, 1);
-      mat_k.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_k.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_k.in(prod_qkt).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_k.in(prod_qkt).tile(ni, ssi, ni, ssi, nt, sst, 16 / 8, 16 / 4);
       mat_k.in(prod_qkt).reorder(nt, sst, ni, ssi, bi, hi, ho, sso, bo, no);
       mat_k.in(prod_qkt).gpu_blocks(bo, no);
       mat_k.in(prod_qkt).gpu_threads(ni, ssi);
@@ -172,8 +172,8 @@ public:
       mat_k.compute_at(mat_k.in(prod_qkt), sso);
       mat_k.update(0).tile(b, h, bo, ho, bi, hi, 1, 1);
       mat_k.update(0).split(ddim, ddimo, ddimi, 1);
-      mat_k.update(0).tile(n, ss, no, sso, ni, ssi, 64, 16);
-      mat_k.update(0).tile(ni, ssi, ni, ssi, nt, sst, 64 / 32, 16 / 4);
+      mat_k.update(0).tile(n, ss, no, sso, ni, ssi, 32, 16);
+      mat_k.update(0).tile(ni, ssi, ni, ssi, nt, sst, 16 / 8, 16 / 4);
       mat_k.update(0).reorder(nt, sst, ddimi, ni, ssi, bi, hi, ho, ddimo, sso, bo, no);
       mat_k.update(0).gpu_threads(ni, ssi);
       mat_k.update(0).vectorize(nt);
